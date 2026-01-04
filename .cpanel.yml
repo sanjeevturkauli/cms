@@ -1,0 +1,5 @@
+---
+deployment:
+  tasks:
+    - export DEPLOYPATH=/home/crbvnago/public_html/
+    - /bin/cp -R app bootstrap config database public resources routes storage vendor artisan composer.json composer.lock $DEPLOYPATH
