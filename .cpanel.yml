@@ -1,12 +1,14 @@
----
 deployment:
   tasks:
     - export APPPATH=/home/crbvnago/repositories/cms
     - export DEPLOYPATH=/home/crbvnago/public_html
 
-    # Copy only public files
-    - /bin/cp -R $APPPATH/public/* $DEPLOYPATH
+    # Remove old files
+    - /bin/rm -rf $DEPLOYPATH/*
 
-    # Set permissions
-    - /bin/chmod -R 775 $APPPATH/storage
-    - /bin/chmod -R 775 $APPPATH/bootstrap/cache
+    # Copy EVERYTHING from repo to public_html
+    - /bin/cp -R $APPPATH/* $DEPLOYPATH/
+
+    # Permissions
+    - /bin/chmod -R 775 $DEPLOYPATH/storage
+    - /bin/chmod -R 775 $DEPLOYPATH/bootstrap/cache
