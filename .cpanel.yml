@@ -3,17 +3,9 @@ deployment:
     - export APPPATH=/home/crbvnago/repositories/cms
     - export DEPLOYPATH=/home/crbvnago/public_html
 
-    # Clear old public files
-    - /bin/rm -rf $DEPLOYPATH/*
+    # Copy everything but don't delete first
+    - /bin/cp -R $APPPATH/* $DEPLOYPATH/
 
-    # Copy public folder
-    - /bin/cp -R $APPPATH/
-    /* $DEPLOYPATH/
-
-    # Fix index.php paths
-    - /bin/sed -i "s|__DIR__.'\/\.\.\/vendor\/autoload.php'|'$APPPATH/vendor/autoload.php'|g" $DEPLOYPATH/index.php
-    - /bin/sed -i "s|__DIR__.'\/\.\.\/bootstrap\/app.php'|'$APPPATH/bootstrap/app.php'|g" $DEPLOYPATH/index.php
-
-    # Permissions
-    - /bin/chmod -R 775 $APPPATH/storage
-    - /bin/chmod -R 775 $APPPATH/bootstrap/cache
+    # Fix permissions
+    - /bin/chmod -R 775 $DEPLOYPATH/storage || true
+    - /bin/chmod -R 775 $DEPLOYPATH/bootstrap/cache || true
