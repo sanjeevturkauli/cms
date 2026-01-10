@@ -28,6 +28,10 @@ export interface SharedData {
     auth: Auth;
     sidebarOpen: boolean;
     currentTeamId?: number | null;
+    wallet?: {
+        balance: string;
+        raw_balance: number;
+    } | null;
     flash?: {
         success?: string;
         error?: string;

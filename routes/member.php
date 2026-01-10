@@ -1,6 +1,7 @@
 <?php
 
-use App\Http\Controllers\TeamController;
+use App\Http\Controllers\Member\MemberController;
+use App\Http\Controllers\Team\TeamController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -27,6 +28,4 @@ Route::delete('/{member}', [TeamController::class, 'removeMember'])
     ->name('remove');
 
 // Member Dashboard
-Route::get('/dashboard', function () {
-    return inertia('member/dashboard');
-})->name('dashboard');
+Route::get('dashboard',[MemberController::class,'dashboard'])->name('dashboard');

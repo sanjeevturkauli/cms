@@ -8,11 +8,13 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
 use Spatie\Permission\Traits\HasRoles;
+use Laravel\Sanctum\HasApiTokens;
+
 
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable, TwoFactorAuthenticatable , HasRoles;
+    use HasFactory, Notifiable, TwoFactorAuthenticatable , HasRoles , HasApiTokens;
 
     /**
      * The attributes that are mass assignable.
@@ -24,6 +26,7 @@ class User extends Authenticatable
         'email',
         'password',
         'mobile',
+        'email_verified_at',
         'is_active',
     ];
 
@@ -86,5 +89,32 @@ class User extends Authenticatable
     public function mpin()
     {
         return $this->hasOne(Mpin::class);
+    }
+
+    public function kyc()
+    {
+        return $this->hasOne(Kyc::class);
+    }
+
+    public function wallet()
+    {
+        return $this->hasOne(Wallet::class);
+    }
+
+    public function transactions()
+    {
+        return $this->hasMany(Transaction::class);
+    }
+
+    // Create wallet when user is created
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::created(function ($user) {
+            $user->wallet()->create([
+                'balance' => 0.00
+            ]);
+        });
     }
 }

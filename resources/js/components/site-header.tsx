@@ -2,9 +2,11 @@ import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { usePage } from "@inertiajs/react"
+import { Wallet } from "lucide-react"
+import { SharedData } from "@/types"
 
 export function SiteHeader() {
-  const { component, props } = usePage<{
+  const { component, props } = usePage<SharedData & {
     auth?: {
       user?: {
         roles?: string[]
@@ -13,6 +15,7 @@ export function SiteHeader() {
   }>()
 
   const activePage = component
+  const wallet = props.wallet
 
   const role = props.auth?.user?.roles && props.auth.user.roles.length > 0 ? props.auth.user.roles[0].name : "";
 
@@ -31,6 +34,12 @@ export function SiteHeader() {
         </h1>
 
         <div className="ml-auto flex items-center gap-2">
+          {wallet && (
+            <div className="flex items-center gap-2 px-3 py-1 bg-green-50 rounded-lg border border-green-200">
+              <Wallet className="h-4 w-4 text-green-600" />
+              <span className="text-sm font-semibold text-green-700">{wallet.balance}</span>
+            </div>
+          )}
           <Button variant="ghost" size="sm" className="hidden sm:flex cursor-pointer">
             {role ? role.charAt(0).toUpperCase() + role.slice(1) : ''}
           </Button>

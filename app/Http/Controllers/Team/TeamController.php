@@ -1,16 +1,20 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Team;
 
+use App\Http\Controllers\Controller;
 use App\Models\Member;
 use App\Models\Team;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 
 class TeamController extends Controller
 {
+    public function dashboard()
+    {
+        return Inertia::render('teams/dashboard');
+    }
     public function index()
     {
         $user = Auth::user();
@@ -25,14 +29,20 @@ class TeamController extends Controller
             $teams = Team::where('user_id', $user->id)
                 ->withCount('members')
                 ->get()
-                ->map(function ($team) {
+                ->map(function ($team) use ($user) {
+                    // Count total teams owned by this user
+                    $totalTeamsOwned = Team::where('user_id', $user->id)->count();
+
                     return [
                         'id' => $team->id,
                         'name' => $team->name,
                         'team_id' => $team->team_id,
+                        'status' => $team->status,
                         'members_count' => $team->members_count,
                         'is_active' => $team->is_active,
                         'created_at' => $team->created_at->format('M d, Y'),
+                        'can_be_deleted' => $totalTeamsOwned > 1 && $team->members_count == 0,
+                        'total_teams_owned' => $totalTeamsOwned,
                     ];
                 });
         } else {
@@ -45,8 +55,11 @@ class TeamController extends Controller
                         'id' => $member->team->id,
                         'name' => $member->team->name,
                         'team_id' => $member->team->team_id,
+                        'status' => $member->team->status,
                         'is_active' => $member->team->is_active,
                         'joined_at' => $member->created_at->format('M d, Y'),
+                        'can_be_deleted' => false, // Members can't delete teams
+                        'total_teams_owned' => 0,
                     ];
                 });
         }
@@ -64,7 +77,6 @@ class TeamController extends Controller
             ],
         ]);
     }
-
     public function store(Request $request)
     {
         $request->validate([
@@ -288,13 +300,17 @@ class TeamController extends Controller
         $isTeamOwner = $team->user_id === $user->id;
         $hasPermission = $user->can('delete teams') || $user->hasRole('admin');
 
-        $hasPermission = $user->can('delete teams') || $user->hasRole('admin');
-
         if (!$hasPermission || !$isTeamOwner) {
             return redirect()->back()->with(
                 'error',
                 'You must be the team owner and have permission to delete.'
             );
+        }
+
+        // Check if this is the user's only team
+        $totalTeamsOwned = Team::where('user_id', $user->id)->count();
+        if ($totalTeamsOwned <= 1) {
+            return redirect()->back()->with('error', 'Cannot delete your only team. You must have at least one team.');
         }
 
         // Prevent deletion if team has members

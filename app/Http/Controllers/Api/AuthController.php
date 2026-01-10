@@ -3,11 +3,15 @@
 namespace App\Http\Controllers\Api;
 
 use App\Models\User;
+use App\Models\Team;
+use App\Models\Member;
 use Illuminate\Support\Arr;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use App\Traits\ResponseHandler;
 use Illuminate\Http\JsonResponse;
 use Spatie\Permission\Models\Role;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
@@ -15,6 +19,7 @@ use Illuminate\Support\Facades\Hash;
 use Laravel\Sanctum\PersonalAccessToken;
 use Illuminate\Support\Facades\Validator;
 use Symfony\Component\HttpFoundation\Response;
+use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
@@ -27,49 +32,174 @@ class AuthController extends Controller
         $this->OtpController = $OtpController;
     }
 
+    // public function register(Request $request): JsonResponse
+    // {
+    //     $validator = Validator::make($request->all(), [
+    //         'name' => ['required', 'string', 'max:255'],
+    //         'type' => ['required', 'string', 'max:255'],
+    //         'google_id' => ['nullable', 'string', 'max:255'],
+    //         'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
+    //         'password' => ['nullable', 'string'],
+    //     ]);
+
+    //     $validator->sometimes('password', ['required'], function ($input) {
+    //         return $input->type === 'email';
+    //     });
+
+    //     $validator->sometimes('google_id', ['required'], function ($input) {
+    //         return $input->type === 'google';
+    //     });
+
+    //     if ($validator->fails()) {
+    //         return $this->response(422, $validator->errors()->first(), [], false);
+    //     }
+
+    //     $validatedData = $validator->validated();
+    //     $data = array_map('trim', $validatedData);
+
+    //     $user = User::create([
+    //         'name' => $data['name'],
+    //         'email' => $data['email'],
+    //         'password' => isset($data['password']) ? Hash::make($data['password']) : null,
+    //         'google_id' => $data['google_id'] ?? null,
+    //     ]);
+
+    //     $memberRole = Role::firstOrCreate(['name' => 'member']);
+    //     $user->assignRole($memberRole);
+
+    //     $token = $user->createToken('auth_token')->plainTextToken;
+
+    //     return $this->response(Response::HTTP_CREATED, 'User registered successfully.', [
+    //         'user' => $this->formatUser($user),
+    //         'token' => $token,
+    //         'token_type' => 'Bearer',
+    //     ]);
+    // }
+
+
+
     public function register(Request $request): JsonResponse
     {
-        $validator = Validator::make($request->all(), [
+        $rules = [
             'name' => ['required', 'string', 'max:255'],
-            'type' => ['required', 'string', 'max:255'],
-            'google_id' => ['nullable', 'string', 'max:255'],
-            'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
+            'email' => [
+                'required',
+                'string',
+                'email',
+                'max:255',
+                Rule::unique('users', 'email'),
+            ],
+            'type' => ['required', 'in:team,member'],
+            'register_type' => ['required', 'in:email,google'],
             'password' => ['nullable', 'string'],
-        ]);
+            'google_id' => ['nullable', 'string'],
+        ];
 
-        $validator->sometimes('password', ['required'], function ($input) {
-            return $input->type === 'email';
-        });
-
-        $validator->sometimes('google_id', ['required'], function ($input) {
-            return $input->type === 'google';
-        });
-
-        if ($validator->fails()) {
-            return $this->response(422, $validator->errors()->first(), [], false);
+        if ($request->register_type === 'email') {
+            $rules['password'] = ['required', 'string', 'min:6'];
         }
 
-        $validatedData = $validator->validated();
-        $data = array_map('trim', $validatedData);
+        if ($request->register_type === 'google') {
+            $rules['google_id'] = ['required', 'string'];
+        }
 
-        $user = User::create([
-            'name' => $data['name'],
-            'email' => $data['email'],
-            'password' => isset($data['password']) ? Hash::make($data['password']) : null,
-            'google_id' => $data['google_id'] ?? null,
-        ]);
+        if ($request->type === 'team') {
+            $rules['team_name'] = ['required', 'string', 'max:255'];
+        }
 
-        $memberRole = Role::firstOrCreate(['name' => 'member']);
-        $user->assignRole($memberRole);
+        if ($request->type === 'member') {
+            $rules['team_code'] = [
+                'required',
+                'string',
+                'size:8',
+                'exists:teams,team_id',
+            ];
+        }
 
-        $token = $user->createToken('auth_token')->plainTextToken;
+        $validator = Validator::make($request->all(), $rules);
 
-        return $this->response(Response::HTTP_CREATED, 'User registered successfully.', [
-            'user' => $this->formatUser($user),
-            'token' => $token,
-            'token_type' => 'Bearer',
-        ]);
+        if ($validator->fails()) {
+            return $this->response(
+                Response::HTTP_UNPROCESSABLE_ENTITY,
+                $validator->errors()->first(),
+                [],
+                false
+            );
+        }
+
+        $data = array_map('trim', $validator->validated());
+
+        try {
+
+            $user = DB::transaction(function () use ($data) {
+                if ($data['type'] === 'member') {
+                    $team = Team::where('team_id', $data['team_code'])->where('is_active', true)->first();
+
+                    if (!$team) {
+                        throw ValidationException::withMessages([
+                            'team_code' =>
+                            'This team is not available right now. Please contact the team administrator.',
+                        ]);
+                    }
+                }
+
+                $user = User::create([
+                    'name' => $data['name'],
+                    'email' => $data['email'],
+                    'password' => $data['register_type'] === 'email' ? Hash::make($data['password']) : null,
+                    'google_id' => $data['register_type'] === 'google' ? $data['google_id'] : null,
+                    'is_active' => true,
+                ]);
+
+                if ($data['type']  === 'member') {
+                    $team = Team::where('team_id', $data['team_code'])->first();
+
+                    Member::create([
+                        'user_id' => $user->id,
+                        'team_id' => $team->id,
+                    ]);
+
+                    $memberRole = Role::firstOrCreate(['name' => 'member']);
+                    $user->assignRole($memberRole);
+                }
+
+                return $user;
+            });
+
+            $token = $user->createToken('auth_token')->plainTextToken;
+
+
+            if (is_null($user->email_verified_at)) {
+                $this->OtpController->createOtpForUser($user);
+                $payload = ['email' => $user->email, 'id' => $user->id];
+
+                $otpToken = encrypt_with_key($payload,  get_key('salt_key'));
+                return $this->response(Response::HTTP_OK, 'Please verify your email to continue.', [
+                    'needsVerification' => true,
+                    'otp_token' => $otpToken,
+                ], true);
+            }
+
+            return $this->response(
+                Response::HTTP_CREATED,
+                'User registered successfully.',
+                [
+                    'user' => $this->formatUser($user),
+                    'token' => $token,
+                    'token_type' => 'Bearer',
+                ]
+            );
+        } catch (ValidationException $e) {
+
+            return $this->response(
+                Response::HTTP_UNPROCESSABLE_ENTITY,
+                $e->getMessage(),
+                [],
+                false
+            );
+        }
     }
+
 
     public function login(Request $request)
     {
@@ -97,25 +227,66 @@ class AuthController extends Controller
         if ($request->type === 'email') {
             $emailCreds = Arr::only($credentials, ['email', 'password']);
             if (!Auth::attempt($emailCreds)) {
-                return $this->response(Response::HTTP_UNAUTHORIZED, 'The provided credentials are incorrect.', [], false);
+                return $this->response(
+                    Response::HTTP_UNAUTHORIZED,
+                    'Invalid email or password.',
+                    [],
+                    false
+                );
             }
             $user = Auth::user();
-        } else if ($request->type === 'google') {
+        } elseif ($request->type === 'google') {
             $user = User::where('email', $credentials['email'])->first();
 
             if (!$user) {
-                return $this->response(Response::HTTP_UNAUTHORIZED, 'User not found. Please register first.', [], false);
+                return $this->response(
+                    Response::HTTP_UNAUTHORIZED,
+                    'User not found. Please register first.',
+                    [],
+                    false
+                );
             }
 
             if (!$user->google_id) {
-                return $this->response(Response::HTTP_UNAUTHORIZED, 'This email is not registered with Google login.', [], false);
+                return $this->response(
+                    Response::HTTP_UNAUTHORIZED,
+                    'This account is not linked with Google login.',
+                    [],
+                    false
+                );
             }
 
             if ($user->google_id !== $credentials['google_id']) {
-                return $this->response(Response::HTTP_UNAUTHORIZED, 'Invalid Google login credentials.', [], false);
+                return $this->response(
+                    Response::HTTP_UNAUTHORIZED,
+                    'Invalid Google login credentials.',
+                    [],
+                    false
+                );
             }
 
             Auth::login($user);
+        }
+
+        if (!$user->hasRole('member')) {
+            Auth::logout();
+            return $this->response(
+                Response::HTTP_FORBIDDEN,
+                'Access denied. Only members are allowed to login.',
+                [],
+                false
+            );
+        }
+
+        // Check if user is active (except for admin)
+        if (!$user->hasRole('admin') && !$user->is_active) {
+            Auth::logout();
+            return $this->response(
+                Response::HTTP_FORBIDDEN,
+                'Your account is inactive. Please contact administrator.',
+                [],
+                false
+            );
         }
 
 

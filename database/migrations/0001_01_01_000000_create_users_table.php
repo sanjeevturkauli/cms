@@ -15,8 +15,11 @@ return new class extends Migration
             $table->id();
             $table->string('name');
             $table->string('email')->unique();
-            $table->boolean('is_active')->nullable()->default(false);
+            $table->string('mobile')->nullable();
+            $table->string('google_id')->nullable();
+            $table->string('profile_photo_path')->nullable();
             $table->timestamp('email_verified_at')->nullable();
+            $table->boolean('is_active')->nullable()->default(false);
             $table->string('password');
             $table->rememberToken();
             $table->timestamps();

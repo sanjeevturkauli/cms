@@ -1,5 +1,5 @@
 import { Head, router, useForm } from '@inertiajs/react';
-import { Check, Copy, Plus, Trash2, Users } from 'lucide-react';
+import { Check, Copy, Plus, RefreshCw, Trash2, Users } from 'lucide-react';
 import { useState } from 'react';
 
 import { AppSidebar } from '@/components/app-sidebar';
@@ -44,10 +44,13 @@ interface Team {
     id: number;
     name: string;
     team_id: string;
+    status: 'pending' | 'approved' | 'rejected';
     members_count?: number;
     is_active?: boolean;
     created_at?: string;
     joined_at?: string;
+    can_be_deleted?: boolean;
+    total_teams_owned?: number;
 }
 
 interface Props {
@@ -66,9 +69,29 @@ interface Props {
 export default function TeamsIndex({ teams, isTeamOwner, permissions }: Props) {
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [copiedTeamId, setCopiedTeamId] = useState<number | null>(null);
+    const [isRefreshing, setIsRefreshing] = useState(false);
     const [formData, setFormData] = useState({
         team_code: '',
     });
+
+    // Status configuration for colors
+    const statusConfig: Record<
+        string,
+        { label: string; className: string }
+    > = {
+        pending: {
+            label: "Pending",
+            className: "bg-yellow-100 text-yellow-800 border-yellow-200",
+        },
+        approved: {
+            label: "Approved", 
+            className: "bg-green-100 text-green-800 border-green-200",
+        },
+        rejected: {
+            label: "Rejected",
+            className: "bg-red-100 text-red-800 border-red-200",
+        },
+    };
 
     // useForm for Create Team
     const {
@@ -138,6 +161,15 @@ export default function TeamsIndex({ teams, isTeamOwner, permissions }: Props) {
         });
     };
 
+    const handleRefresh = () => {
+        setIsRefreshing(true);
+        router.get('/teams', {}, {
+            preserveScroll: true,
+            preserveState: true,
+            onFinish: () => setIsRefreshing(false),
+        });
+    };
+
     return (
         <SidebarProvider
             style={
@@ -166,18 +198,32 @@ export default function TeamsIndex({ teams, isTeamOwner, permissions }: Props) {
                                     </p>
                                 </div>
 
-                                <Dialog
-                                    open={isDialogOpen}
-                                    onOpenChange={setIsDialogOpen}
-                                >
-                                    <DialogTrigger asChild>
-                                        <Button className="cursor-pointer">
-                                            <Plus className="h-4 w-4" />
-                                            {isTeamOwner
-                                                ? 'Create New Team'
-                                                : 'Join New Team'}
-                                        </Button>
-                                    </DialogTrigger>
+                                <div className="flex items-center gap-2">
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={handleRefresh}
+                                        disabled={isRefreshing}
+                                        className="cursor-pointer"
+                                    >
+                                        <RefreshCw
+                                            className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`}
+                                        />
+                                        {isRefreshing ? 'Refreshing...' : 'Refresh'}
+                                    </Button>
+
+                                    <Dialog
+                                        open={isDialogOpen}
+                                        onOpenChange={setIsDialogOpen}
+                                    >
+                                        <DialogTrigger asChild>
+                                            <Button className="cursor-pointer">
+                                                <Plus className="h-4 w-4" />
+                                                {isTeamOwner
+                                                    ? 'Create New Team'
+                                                    : 'Join New Team'}
+                                            </Button>
+                                        </DialogTrigger>
                                     <DialogContent>
                                         <form
                                             onSubmit={
@@ -283,6 +329,7 @@ export default function TeamsIndex({ teams, isTeamOwner, permissions }: Props) {
                                         </form>
                                     </DialogContent>
                                 </Dialog>
+                                </div>
                             </div>
 
                             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -301,12 +348,21 @@ export default function TeamsIndex({ teams, isTeamOwner, permissions }: Props) {
                                     teams.map((team) => (
                                         <Card
                                             key={team.id}
-                                            className="relative"
+                                            className={`relative border-l-4 ${
+                                                team.status === 'approved' 
+                                                    ? 'border-l-green-500' 
+                                                    : team.status === 'pending'
+                                                    ? 'border-l-yellow-500'
+                                                    : 'border-l-red-500'
+                                            }`}
                                         >
                                             <CardHeader>
                                                 <div className="flex items-start justify-between">
                                                     <div className="flex-1">
-                                                        <CardTitle>
+                                                        <CardTitle 
+                                                            className="cursor-pointer hover:text-primary transition-colors"
+                                                            onClick={() => router.get(`/teams/${team.id}/info`)}
+                                                        >
                                                             {team.name}
                                                         </CardTitle>
                                                         <CardDescription className="mt-2 flex flex-wrap items-center gap-2">
@@ -338,6 +394,16 @@ export default function TeamsIndex({ teams, isTeamOwner, permissions }: Props) {
                                                                 )}
                                                             </Button>
                                                         </CardDescription>
+                                                        
+                                                        {/* Status Badge */}
+                                                        <div className="mt-2">
+                                                            <Badge
+                                                                className={`text-xs ${statusConfig[team.status]?.className ?? "bg-gray-100 text-gray-800 border-gray-200"}`}
+                                                                variant="outline"
+                                                            >
+                                                                {statusConfig[team.status]?.label ?? "Unknown"}
+                                                            </Badge>
+                                                        </div>
                                                     </div>
 
                                                     {/* Delete Button in Top Right */}
@@ -349,8 +415,15 @@ export default function TeamsIndex({ teams, isTeamOwner, permissions }: Props) {
                                                                 <Button
                                                                     variant="ghost"
                                                                     size="sm"
-                                                                    className="ml-2 h-8 w-8 p-0 text-destructive cursor-pointer hover:bg-destructive/10 hover:text-destructive"
-                                                                    title="Delete Team"
+                                                                    className="ml-2 h-8 w-8 p-0 text-destructive cursor-pointer hover:bg-destructive/10 hover:text-destructive disabled:opacity-50 disabled:cursor-not-allowed"
+                                                                    title={
+                                                                        !team.can_be_deleted 
+                                                                            ? (team.total_teams_owned === 1 
+                                                                                ? "Cannot delete your only team" 
+                                                                                : "Remove all members first")
+                                                                            : "Delete Team"
+                                                                    }
+                                                                    disabled={!team.can_be_deleted}
                                                                 >
                                                                     <Trash2 className="h-4 w-4" />
                                                                 </Button>
@@ -358,58 +431,27 @@ export default function TeamsIndex({ teams, isTeamOwner, permissions }: Props) {
                                                             <AlertDialogContent>
                                                                 <AlertDialogHeader>
                                                                     <AlertDialogTitle>
-                                                                        Delete
-                                                                        Team
+                                                                        Delete Team
                                                                     </AlertDialogTitle>
                                                                     <AlertDialogDescription>
-                                                                        Are you
-                                                                        sure you
-                                                                        want to
-                                                                        delete
-                                                                        the team
-                                                                        "
-                                                                        {
-                                                                            team.name
-                                                                        }
-                                                                        "?
-                                                                        {team.members_count &&
-                                                                            team.members_count >
-                                                                                0 && (
-                                                                                <span className="mt-2 block font-medium text-destructive">
-                                                                                    Warning:
-                                                                                    This
-                                                                                    team
-                                                                                    has{' '}
-                                                                                    {
-                                                                                        team.members_count
-                                                                                    }{' '}
-                                                                                    member(s).
-                                                                                    Please
-                                                                                    remove
-                                                                                    all
-                                                                                    members
-                                                                                    before
-                                                                                    deleting
-                                                                                    the
-                                                                                    team.
-                                                                                </span>
-                                                                            )}
-                                                                        {(!team.members_count ||
-                                                                            team.members_count ===
-                                                                                0) && (
+                                                                        Are you sure you want to delete the team "{team.name}"?
+                                                                        
+                                                                        {team.members_count && team.members_count > 0 && (
+                                                                            <span className="mt-2 block font-medium text-destructive">
+                                                                                Warning: This team has {team.members_count} member(s). 
+                                                                                Please remove all members before deleting the team.
+                                                                            </span>
+                                                                        )}
+                                                                        
+                                                                        {team.total_teams_owned === 1 && (
+                                                                            <span className="mt-2 block font-medium text-destructive">
+                                                                                Warning: This is your only team. You must have at least one team.
+                                                                            </span>
+                                                                        )}
+                                                                        
+                                                                        {team.can_be_deleted && (
                                                                             <span className="mt-2 block">
-                                                                                This
-                                                                                action
-                                                                                cannot
-                                                                                be
-                                                                                undone.
-                                                                                All
-                                                                                team
-                                                                                data
-                                                                                will
-                                                                                be
-                                                                                permanently
-                                                                                deleted.
+                                                                                This action cannot be undone. All team data will be permanently deleted.
                                                                             </span>
                                                                         )}
                                                                     </AlertDialogDescription>
@@ -419,20 +461,11 @@ export default function TeamsIndex({ teams, isTeamOwner, permissions }: Props) {
                                                                         Cancel
                                                                     </AlertDialogCancel>
                                                                     <AlertDialogAction
-                                                                        onClick={() =>
-                                                                            handleDeleteTeam(
-                                                                                team.id,
-                                                                            )
-                                                                        }
-                                                                        disabled={Boolean(
-                                                                            team.members_count &&
-                                                                                team.members_count >
-                                                                                    0,
-                                                                        )}
-                                                                        className="bg-destructive text-white cursor-pointer hover:bg-destructive/90"
+                                                                        onClick={() => handleDeleteTeam(team.id)}
+                                                                        disabled={!team.can_be_deleted}
+                                                                        className="bg-destructive text-white cursor-pointer hover:bg-destructive/90 disabled:opacity-50 disabled:cursor-not-allowed"
                                                                     >
-                                                                        Delete
-                                                                        Team
+                                                                        Delete Team
                                                                     </AlertDialogAction>
                                                                 </AlertDialogFooter>
                                                             </AlertDialogContent>

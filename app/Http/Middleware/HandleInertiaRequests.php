@@ -40,9 +40,20 @@ class HandleInertiaRequests extends Middleware
 
         $teams = [];
         $isTeamOwner = false;
+        $wallet = null;
 
         if ($request->user()) {
             $user = $request->user();
+
+            // Ensure user has a wallet and get wallet data
+            if (!$user->wallet) {
+                $user->wallet()->create(['balance' => 0.00]);
+            }
+            
+            $wallet = [
+                'balance' => $user->wallet->formatted_balance,
+                'raw_balance' => $user->wallet->balance,
+            ];
 
             // Check if user is a team owner
             $isTeamOwner = \App\Models\Team::where('user_id', $user->id)->exists();
@@ -90,6 +101,7 @@ class HandleInertiaRequests extends Middleware
             'isMember' => $request->user() ? $request->user()->hasRole('member') : false,
 
             'currentTeamId' => $request->session()->get('current_team_id'),
+            'wallet' => $wallet,
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
             'flash' => [
                 'success' => $request->session()->get('success'),

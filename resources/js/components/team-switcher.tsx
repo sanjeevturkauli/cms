@@ -19,7 +19,7 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar"
-import { index as teamsIndex } from "@/routes/teams"
+import { index as teamIndex } from "@/routes/team"
 import { type SharedData } from "@/types"
 
 interface Team {
@@ -39,7 +39,7 @@ export function TeamSwitcher({
   const { isMobile } = useSidebar()
   const { props } = usePage<SharedData>()
   const currentTeamId = props.currentTeamId
-  
+
   // Find active team based on currentTeamId or default to first team
   const activeTeam = React.useMemo(() => {
     if (currentTeamId) {
@@ -50,7 +50,7 @@ export function TeamSwitcher({
 
   const handleSwitchTeam = (team: Team) => {
     if (team.id === activeTeam?.id) return
-    
+
     router.post(`/teams/switch/${team.id}`, {}, {
       preserveScroll: true,
       preserveState: true,
@@ -58,7 +58,7 @@ export function TeamSwitcher({
   }
 
   const handleAddTeam = () => {
-    router.visit(teamsIndex.url())
+    router.visit(teamIndex.url())
   }
 
   if (!activeTeam && teams.length === 0) {

@@ -119,28 +119,6 @@ class OtpController extends Controller
 
             DB::commit();
 
-            $cookie = cookie(
-                'app_auth_token',
-                $token,
-                60 * 24 * 7,
-                '/',
-                null,
-                true,
-                true
-            );
-
-
-            // return $this->response(
-            //     Response::HTTP_OK,
-            //     'OTP verified successfully.',
-            //     [
-            //         'user'              => formatUser($user),
-            //         'token'             => $token,
-            //         'token_type'        => 'Bearer',
-            //         'needsVerification' => false,
-            //     ]
-            // );
-
             return response()->json([
                 'success' => true,
                 'message' => 'Login successful',
@@ -149,7 +127,7 @@ class OtpController extends Controller
                     'token_type' => 'Bearer',
                     'user' => formatUser($user),
                 ],
-            ])->withCookie($cookie);
+            ]);
         } catch (\Throwable $e) {
             report($e);
 

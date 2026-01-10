@@ -13,11 +13,16 @@ class Team extends Model
         'user_id',
         'name',
         'team_id',
+        'status',
         'is_active',
     ];
 
     protected $casts = [
         'is_active' => 'boolean',
+    ];
+
+    protected $attributes = [
+        'status' => 'pending',
     ];
 
     protected static function boot()
@@ -44,5 +49,20 @@ class Team extends Model
     public function members(): HasMany
     {
         return $this->hasMany(Member::class);
+    }
+
+    public function teamInfo(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(TeamInfo::class);
+    }
+
+    public function subscriptions(): HasMany
+    {
+        return $this->hasMany(Subscription::class);
+    }
+
+    public function activeSubscription()
+    {
+        return $this->hasOne(Subscription::class)->where('status', 'active');
     }
 }
