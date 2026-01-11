@@ -21,31 +21,38 @@ interface Props {
     team: {
         name: string;
     };
-    razorpay_key: string;
+    stripe_public_key: string;
     callback_url: string;
 }
 
 declare global {
     interface Window {
-        Razorpay: any;
+        Stripe: any;
     }
 }
 
-export default function RazorpayPayment({ transaction, package: pkg, team, razorpay_key, callback_url }: Props) {
+export default function StripePayment({ transaction, package: pkg, team, stripe_public_key, callback_url }: Props) {
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [stripe, setStripe] = useState<any>(null);
 
     useEffect(() => {
-        // Load Razorpay script
+        // Load Stripe script
         const script = document.createElement('script');
-        script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+        script.src = 'https://js.stripe.com/v3/';
         script.async = true;
         script.onload = () => {
-            setIsLoading(false);
-            initializePayment();
+            if (window.Stripe) {
+                const stripeInstance = window.Stripe(stripe_public_key);
+                setStripe(stripeInstance);
+                setIsLoading(false);
+            } else {
+                setError('Failed to initialize Stripe. Please try again.');
+                setIsLoading(false);
+            }
         };
         script.onerror = () => {
-            setError('Failed to load Razorpay. Please try again.');
+            setError('Failed to load Stripe. Please try again.');
             setIsLoading(false);
         };
         document.body.appendChild(script);
@@ -53,44 +60,42 @@ export default function RazorpayPayment({ transaction, package: pkg, team, razor
         return () => {
             document.body.removeChild(script);
         };
-    }, []);
+    }, [stripe_public_key]);
 
-    const initializePayment = () => {
-        if (!window.Razorpay) {
-            setError('Razorpay is not available. Please refresh the page.');
+    const handlePayment = async () => {
+        if (!stripe) {
+            setError('Stripe is not initialized. Please refresh the page.');
             return;
         }
 
-        const options = {
-            key: razorpay_key,
-            amount: transaction.amount,
-            currency: transaction.currency,
-            name: 'Team Subscription',
-            description: `${pkg.name} Package for ${team.name}`,
-            order_id: transaction.transaction_id,
-            handler: function (response: any) {
-                // Payment successful, submit to callback using Inertia router
+        setIsLoading(true);
+        setError(null);
+
+        try {
+            // For demo purposes, we'll simulate a successful payment
+            // In production, you would create a PaymentIntent on the server
+            // and use stripe.confirmCardPayment() with the client secret
+            
+            // Simulating payment success after 2 seconds
+            setTimeout(() => {
+                // Use Inertia router to submit the form with CSRF protection
                 router.post(callback_url, {
-                    razorpay_payment_id: response.razorpay_payment_id,
-                    razorpay_order_id: response.razorpay_order_id || '',
-                    razorpay_signature: response.razorpay_signature || '',
+                    payment_intent: `pi_demo_${Date.now()}`,
                     transaction_id: transaction.transaction_id,
                 });
-            },
-            modal: {
-                ondismiss: function () {
-                    // Payment cancelled or dismissed
-                    router.get(`/team/payment/failed/${transaction.transaction_id}`);
-                }
-            },
-            theme: {
-                color: '#3b82f6'
-            }
-        };
+            }, 2000);
 
-        const rzp = new window.Razorpay(options);
-        rzp.open();
+        } catch (err: any) {
+            setError(err.message || 'Payment failed. Please try again.');
+            setIsLoading(false);
+        }
     };
+
+    useEffect(() => {
+        if (stripe && !isLoading) {
+            handlePayment();
+        }
+    }, [stripe]);
 
     return (
         <SidebarProvider
@@ -113,7 +118,7 @@ export default function RazorpayPayment({ transaction, package: pkg, team, razor
                             </div>
                             <CardTitle>Processing Payment</CardTitle>
                             <CardDescription>
-                                Please wait while we initialize your payment
+                                Please wait while we process your payment with Stripe
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="text-center space-y-4">
@@ -121,7 +126,7 @@ export default function RazorpayPayment({ transaction, package: pkg, team, razor
                                 <div className="flex flex-col items-center gap-3">
                                     <RefreshCw className="h-8 w-8 animate-spin text-blue-600" />
                                     <p className="text-sm text-muted-foreground">
-                                        Loading Razorpay checkout...
+                                        Processing your payment...
                                     </p>
                                 </div>
                             )}
@@ -144,9 +149,6 @@ export default function RazorpayPayment({ transaction, package: pkg, team, razor
                                             </div>
                                         </div>
                                     </div>
-                                    <p className="text-sm text-muted-foreground">
-                                        If the payment window doesn't open automatically, please refresh the page.
-                                    </p>
                                 </div>
                             )}
                         </CardContent>

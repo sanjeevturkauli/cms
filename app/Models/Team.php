@@ -46,6 +46,12 @@ class Team extends Model
         return $this->belongsTo(User::class);
     }
 
+    // Alias for user relationship (team owner)
+    public function owner(): BelongsTo
+    {
+        return $this->user();
+    }
+
     public function members(): HasMany
     {
         return $this->hasMany(Member::class);

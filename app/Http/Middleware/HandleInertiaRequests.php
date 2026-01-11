@@ -94,7 +94,7 @@ class HandleInertiaRequests extends Middleware
                 'user' => $request->user()?->load('roles', 'permissions'),
             ],
             'routeName' => request()->route()?->getName(),
-            'teams' => $request->user() ? $request->user()->hasRole('team') ? $teams : null : null,
+            'teams' => $request->user() ? ($isTeamOwner || $request->user()->hasRole('member')) ? $teams : [] : [],
             'isTeamOwner' => $isTeamOwner,
 
             'isAdmin' => $request->user() ? $request->user()->hasRole('admin') : false,
@@ -103,11 +103,16 @@ class HandleInertiaRequests extends Middleware
             'currentTeamId' => $request->session()->get('current_team_id'),
             'wallet' => $wallet,
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
+            'siteSettings' => [
+                'site_name' => \App\Models\Setting::get('site_name', config('app.name')),
+                'site_description' => \App\Models\Setting::get('site_description', 'Content Management System'),
+            ],
             'flash' => [
                 'success' => $request->session()->get('success'),
                 'error' => $request->session()->get('error'),
                 'warning' => $request->session()->get('warning'),
                 'info' => $request->session()->get('info'),
+                'stripePayment' => $request->session()->get('stripePayment'),
             ],
         ];
     }

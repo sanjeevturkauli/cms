@@ -32,6 +32,10 @@ export interface SharedData {
         balance: string;
         raw_balance: number;
     } | null;
+    siteSettings?: {
+        site_name: string;
+        site_description: string;
+    };
     flash?: {
         success?: string;
         error?: string;

@@ -53,6 +53,13 @@ class SettingSeeder extends Seeder
                 'description' => 'Enable Stripe payment gateway',
             ],
             [
+                'key' => 'stripe_live_mode',
+                'value' => '0',
+                'group' => 'payment',
+                'type' => 'boolean',
+                'description' => 'Enable Stripe live mode',
+            ],
+            [
                 'key' => 'stripe_public_key',
                 'value' => '',
                 'group' => 'payment',
@@ -74,6 +81,13 @@ class SettingSeeder extends Seeder
                 'group' => 'payment',
                 'type' => 'boolean',
                 'description' => 'Enable PayPal payment gateway',
+            ],
+            [
+                'key' => 'paypal_live_mode',
+                'value' => '0',
+                'group' => 'payment',
+                'type' => 'boolean',
+                'description' => 'Enable PayPal live mode',
             ],
             [
                 'key' => 'paypal_client_id',
@@ -104,6 +118,13 @@ class SettingSeeder extends Seeder
                 'group' => 'payment',
                 'type' => 'boolean',
                 'description' => 'Enable Razorpay payment gateway',
+            ],
+            [
+                'key' => 'razorpay_live_mode',
+                'value' => '0',
+                'group' => 'payment',
+                'type' => 'boolean',
+                'description' => 'Enable Razorpay live mode',
             ],
             [
                 'key' => 'razorpay_key_id',

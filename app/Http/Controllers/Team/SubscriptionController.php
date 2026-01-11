@@ -63,6 +63,27 @@ class SubscriptionController extends Controller
             ];
         });
 
+        // Get payment gateway settings
+        $paymentGateways = [
+            'stripe' => [
+                'enabled' => \App\Models\Setting::get('stripe_enabled', false),
+                'name' => 'Stripe',
+                'description' => 'Credit/Debit Cards',
+                'public_key' => \App\Models\Setting::get('stripe_public_key', ''),
+            ],
+            'paypal' => [
+                'enabled' => \App\Models\Setting::get('paypal_enabled', false),
+                'name' => 'PayPal',
+                'description' => 'PayPal Account',
+            ],
+            'razorpay' => [
+                'enabled' => \App\Models\Setting::get('razorpay_enabled', false),
+                'name' => 'Razorpay',
+                'description' => 'UPI, Cards, NetBanking, Wallets',
+                'key_id' => \App\Models\Setting::get('razorpay_key_id', ''),
+            ],
+        ];
+
         return Inertia::render('teams/subscriptions/index', [
             'teams' => $teams,
             'packages' => $packages,
@@ -70,6 +91,8 @@ class SubscriptionController extends Controller
                 'balance' => $user->wallet->formatted_balance,
                 'raw_balance' => $user->wallet->balance,
             ],
+            'paymentGateways' => $paymentGateways,
+            'cancellationFee' => \App\Models\Setting::get('cancellation_fee', 500),
         ]);
     }
 
@@ -222,9 +245,9 @@ class SubscriptionController extends Controller
         }
 
         // Check if user has sufficient balance for cancellation fee
-        $cancellationFee = 500;
+        $cancellationFee = \App\Models\Setting::get('cancellation_fee', 500);
         if (!$user->wallet || $user->wallet->balance < $cancellationFee) {
-            return redirect()->back()->with('error', 'Insufficient wallet balance. You need ₹500 for cancellation fee. Please add money to your wallet first.');
+            return redirect()->back()->with('error', "Insufficient wallet balance. You need ₹{$cancellationFee} for cancellation fee. Please add money to your wallet first.");
         }
 
         $walletBalanceBefore = $user->wallet->balance;

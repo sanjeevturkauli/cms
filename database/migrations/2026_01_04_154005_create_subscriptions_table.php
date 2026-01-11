@@ -24,7 +24,7 @@ return new class extends Migration
             $table->timestamps();
 
             // Ensure a team can only have one active subscription at a time
-            $table->unique(['team_id', 'status'], 'unique_active_subscription');
+            // $table->unique(['team_id', 'status'], 'unique_active_subscription');
         });
     }
 

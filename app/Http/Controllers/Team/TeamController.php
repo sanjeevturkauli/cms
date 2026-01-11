@@ -15,6 +15,7 @@ class TeamController extends Controller
     {
         return Inertia::render('teams/dashboard');
     }
+
     public function index()
     {
         $user = Auth::user();
@@ -58,7 +59,7 @@ class TeamController extends Controller
                         'status' => $member->team->status,
                         'is_active' => $member->team->is_active,
                         'joined_at' => $member->created_at->format('M d, Y'),
-                        'can_be_deleted' => false, // Members can't delete teams
+                        'can_be_deleted' => false,  // Members can't delete teams
                         'total_teams_owned' => 0,
                     ];
                 });
@@ -77,6 +78,7 @@ class TeamController extends Controller
             ],
         ]);
     }
+
     public function store(Request $request)
     {
         $request->validate([
@@ -138,22 +140,32 @@ class TeamController extends Controller
 
     public function switchTeam(Request $request, Team $team)
     {
-        $user = Auth::user();
+        $user = $request->user();
 
-        // Check if user owns this team or is a member
-        $isOwner = $team->user_id === $user->id;
-        $isMember = Member::where('user_id', $user->id)
-            ->where('team_id', $team->id)
-            ->exists();
+        // ✅ Check ownership or membership (single query)
+        $hasAccess = $team->user_id === $user->id ||
+            $team->members()->where('user_id', $user->id)->exists();
 
-        if (!$isOwner && !$isMember) {
-            return redirect()->back()->with('error', 'You do not have access to this team.');
+        if (!$hasAccess) {
+            return back()->with('error', 'You do not have access to this team.');
         }
 
-        // Store selected team in session
-        session(['current_team_id' => $team->id]);
+        // ✅ Permission check (admin OR permission OR owner)
+        if (
+            $team->user_id !== $user->id &&
+            !$user->hasRole('admin') &&
+            !$user->can('switch teams')
+        ) {
+            return back()->with(
+                'error',
+                'You do not have permission to switch this team.'
+            );
+        }
 
-        return redirect()->back()->with('info', "Switched to team: {$team->name}");
+        // ✅ Store selected team
+        session()->put('current_team_id', $team->id);
+
+        return back()->with('info', "Switched to team: {$team->name}");
     }
 
     public function members()

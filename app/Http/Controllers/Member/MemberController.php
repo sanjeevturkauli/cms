@@ -10,6 +10,6 @@ class MemberController extends Controller
 {
     public function dashboard()
     {
-        return Inertia::render('member/dashboard');
+        return Inertia::render('members/dashboard');
     }
 }

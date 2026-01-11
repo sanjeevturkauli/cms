@@ -28,6 +28,7 @@ Route::group(['prefix' => 'subscriptions', 'as' => 'subscriptions.'], function (
 Route::group(['prefix' => 'payment', 'as' => 'payment.'], function () {
     Route::post('/initiate', [\App\Http\Controllers\Team\PaymentController::class, 'initiatePayment'])->name('initiate');
     Route::post('/callback/razorpay', [\App\Http\Controllers\Team\PaymentController::class, 'razorpayCallback'])->name('callback.razorpay');
+    Route::post('/callback/stripe', [\App\Http\Controllers\Team\PaymentController::class, 'stripeCallback'])->name('callback.stripe');
     Route::get('/success/{transactionId}', [\App\Http\Controllers\Team\PaymentController::class, 'paymentSuccess'])->name('success');
     Route::get('/failed/{transactionId}', [\App\Http\Controllers\Team\PaymentController::class, 'paymentFailed'])->name('failed');
 });
@@ -39,13 +40,11 @@ Route::middleware('check.subscription')->group(function () {
 
     Route::post('/', [TeamController::class, 'store'])->middleware('permission:create teams')->name('store');
 
-    Route::post('/join', [TeamController::class, 'join'])->middleware('permission:join teams')->name('join');
+    // Route::post('/join', [TeamController::class, 'join'])->middleware('permission:join teams')->name('join');
 
     Route::patch('/{team}/toggle-active', [TeamController::class, 'toggleActive'])->name('toggleActive');
 
     Route::delete('/{team}', [TeamController::class, 'destroy'])->name('destroy');
-
-    Route::post('/switch/{team}', [TeamController::class, 'switchTeam'])->middleware('permission:switch teams')->name('switch');
 
     // Team Info Routes
     Route::get('/{team}/info', [TeamInfoController::class, 'show'])->name('info');

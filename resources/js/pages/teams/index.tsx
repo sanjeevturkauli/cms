@@ -38,7 +38,7 @@ import { Label } from '@/components/ui/label';
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
 import { Spinner } from '@/components/ui/spinner';
 import { Switch } from '@/components/ui/switch';
-import { join, store, toggleActive } from '@/routes/teams';
+import { store , toggleActive} from '@/routes/team';
 
 interface Team {
     id: number;
@@ -70,9 +70,6 @@ export default function TeamsIndex({ teams, isTeamOwner, permissions }: Props) {
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [copiedTeamId, setCopiedTeamId] = useState<number | null>(null);
     const [isRefreshing, setIsRefreshing] = useState(false);
-    const [formData, setFormData] = useState({
-        team_code: '',
-    });
 
     // Status configuration for colors
     const statusConfig: Record<
@@ -105,18 +102,6 @@ export default function TeamsIndex({ teams, isTeamOwner, permissions }: Props) {
         name: '',
     });
 
-    // useForm for Join Team
-    const {
-        data: joinData,
-        setData: setJoinData,
-        post: joinPost,
-        processing: joinProcessing,
-        errors: joinErrors,
-        reset: joinReset,
-    } = useForm({
-        team_code: '',
-    });
-
     const handleCopyTeamCode = (teamCode: string, teamId: number) => {
         navigator.clipboard.writeText(teamCode);
         setCopiedTeamId(teamId);
@@ -129,17 +114,6 @@ export default function TeamsIndex({ teams, isTeamOwner, permissions }: Props) {
         createPost(store.url(), {
             onSuccess: () => {
                 createReset();
-                setIsDialogOpen(false);
-            },
-        });
-    };
-
-    const handleJoinTeam = (e: React.FormEvent) => {
-        e.preventDefault();
-
-        joinPost(join.url(), {
-            onSuccess: () => {
-                joinReset();
                 setIsDialogOpen(false);
             },
         });
@@ -219,111 +193,55 @@ export default function TeamsIndex({ teams, isTeamOwner, permissions }: Props) {
                                         <DialogTrigger asChild>
                                             <Button className="cursor-pointer">
                                                 <Plus className="h-4 w-4" />
-                                                {isTeamOwner
-                                                    ? 'Create New Team'
-                                                    : 'Join New Team'}
+                                                Create New Team
                                             </Button>
                                         </DialogTrigger>
                                     <DialogContent>
-                                        <form
-                                            onSubmit={
-                                                isTeamOwner
-                                                    ? handleCreateTeam
-                                                    : handleJoinTeam
-                                            }
-                                        >
+                                        <form onSubmit={handleCreateTeam}>
                                             <DialogHeader>
                                                 <DialogTitle>
-                                                    {isTeamOwner
-                                                        ? 'Create New Team'
-                                                        : 'Join New Team'}
+                                                    Create New Team
                                                 </DialogTitle>
                                                 <DialogDescription>
-                                                    {isTeamOwner
-                                                        ? 'Create a new team and get a unique team code to share with members.'
-                                                        : 'Enter the team code provided by your team owner to join.'}
+                                                    Create a new team and get a unique team code to share with members.
                                                 </DialogDescription>
                                             </DialogHeader>
 
                                             <div className="grid gap-4 py-4">
-                                                {isTeamOwner ? (
-                                                    <div className="grid gap-2">
-                                                        <Label htmlFor="name">
-                                                            Team Name
-                                                        </Label>
-                                                        <Input
-                                                            id="name"
-                                                            value={
-                                                                createData.name
-                                                            }
-                                                            onChange={(e) =>
-                                                                setCreateData(
-                                                                    'name',
-                                                                    e.target
-                                                                        .value,
-                                                                )
-                                                            }
-                                                            placeholder="Enter team name"
-                                                            required
-                                                        />
-                                                        {createErrors.name && (
-                                                            <p className="text-sm text-red-500">
-                                                                {
-                                                                    createErrors.name
-                                                                }
-                                                            </p>
-                                                        )}
-                                                    </div>
-                                                ) : (
-                                                    <div className="grid gap-2">
-                                                        <Label htmlFor="team_code">
-                                                            Team Code
-                                                        </Label>
-                                                        <Input
-                                                            id="team_code"
-                                                            value={
-                                                                joinData.team_code
-                                                            }
-                                                            onChange={(e) =>
-                                                                setJoinData(
-                                                                    'team_code',
-                                                                    e.target.value.toUpperCase(),
-                                                                )
-                                                            }
-                                                            placeholder="Enter team code (e.g., HDJFU764)"
-                                                            maxLength={8}
-                                                            className="uppercase"
-                                                            required
-                                                        />
-                                                        {joinErrors.team_code && (
-                                                            <p className="text-sm text-red-500">
-                                                                {
-                                                                    joinErrors.team_code
-                                                                }
-                                                            </p>
-                                                        )}
-                                                    </div>
-                                                )}
+                                                <div className="grid gap-2">
+                                                    <Label htmlFor="name">
+                                                        Team Name
+                                                    </Label>
+                                                    <Input
+                                                        id="name"
+                                                        value={createData.name}
+                                                        onChange={(e) =>
+                                                            setCreateData(
+                                                                'name',
+                                                                e.target.value,
+                                                            )
+                                                        }
+                                                        placeholder="Enter team name"
+                                                        required
+                                                    />
+                                                    {createErrors.name && (
+                                                        <p className="text-sm text-red-500">
+                                                            {createErrors.name}
+                                                        </p>
+                                                    )}
+                                                </div>
                                             </div>
 
                                             <DialogFooter>
                                                 <Button
                                                     type="submit"
-                                                    disabled={
-                                                        isTeamOwner
-                                                            ? createProcessing
-                                                            : joinProcessing
-                                                    }
+                                                    disabled={createProcessing}
                                                     className="cursor-pointer"
                                                 >
-                                                    {(isTeamOwner
-                                                        ? createProcessing
-                                                        : joinProcessing) && (
+                                                    {createProcessing && (
                                                         <Spinner className="mr-2" />
                                                     )}
-                                                    {isTeamOwner
-                                                        ? 'Create Team'
-                                                        : 'Join Team'}
+                                                    Create Team
                                                 </Button>
                                             </DialogFooter>
                                         </form>

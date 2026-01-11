@@ -40,7 +40,7 @@ class LoginResponse implements LoginResponseContract
             // If no active subscription, redirect to subscriptions page
             if (!$hasActiveSubscription) {
                 return redirect()->route('team.subscriptions.index')
-                    ->with('warning', 'Please subscribe to a package to access team features.');
+                    ->with('error', 'Please subscribe to a package to access team features.');
             }
         }
 

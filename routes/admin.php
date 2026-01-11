@@ -60,4 +60,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/', [\App\Http\Controllers\Admin\SettingController::class, 'index'])->middleware('role:admin')->name('index');
         Route::post('/update', [\App\Http\Controllers\Admin\SettingController::class, 'update'])->middleware('role:admin')->name('update');
     });
+
+    // Transaction Management Routes (Admin only)
+    Route::group(['prefix' => 'transactions', 'as' => 'transactions.'], function () {
+        Route::get('/', [\App\Http\Controllers\Admin\TransactionController::class, 'index'])->middleware('role:admin')->name('index');
+        Route::get('/{transaction}', [\App\Http\Controllers\Admin\TransactionController::class, 'show'])->middleware('role:admin')->name('show');
+    });
 });

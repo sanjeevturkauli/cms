@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/sidebar"
 import { index as teamIndex } from "@/routes/team"
 import { type SharedData } from "@/types"
+import { JoinTeamDialog } from "@/components/join-team-dialog"
 
 interface Team {
   id: number
@@ -51,29 +52,51 @@ export function TeamSwitcher({
   const handleSwitchTeam = (team: Team) => {
     if (team.id === activeTeam?.id) return
 
-    router.post(`/teams/switch/${team.id}`, {}, {
+    router.post(`/switch/${team.id}`, {}, {
       preserveScroll: true,
       preserveState: true,
     })
   }
 
   const handleAddTeam = () => {
-    router.visit(teamIndex.url())
+    if (isTeamOwner) {
+      router.visit(teamIndex.url())
+    }
+    // For members, the JoinTeamDialog will handle the join functionality
   }
 
   if (!activeTeam && teams.length === 0) {
     return (
       <SidebarMenu>
         <SidebarMenuItem>
-          <SidebarMenuButton size="lg" onClick={handleAddTeam}>
-            <div className="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg">
-              <Users className="size-4" />
-            </div>
-            <div className="grid flex-1 text-left text-sm leading-tight">
-              <span className="truncate font-medium">No Teams</span>
-              <span className="truncate text-xs">Click to add</span>
-            </div>
-          </SidebarMenuButton>
+          {isTeamOwner ? (
+            <SidebarMenuButton size="lg" onClick={handleAddTeam}>
+              <div className="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg">
+                <Users className="size-4" />
+              </div>
+              <div className="grid flex-1 text-left text-sm leading-tight">
+                <span className="truncate font-medium">No Teams</span>
+                <span className="truncate text-xs">Click to add</span>
+              </div>
+            </SidebarMenuButton>
+          ) : (
+            <JoinTeamDialog
+              trigger={
+                <SidebarMenuButton size="lg">
+                  <div className="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg">
+                    <Users className="size-4" />
+                  </div>
+                  <div className="grid flex-1 text-left text-sm leading-tight">
+                    <span className="truncate font-medium">No Teams</span>
+                    <span className="truncate text-xs">Click to join</span>
+                  </div>
+                </SidebarMenuButton>
+              }
+              onSuccess={() => {
+                router.reload()
+              }}
+            />
+          )}
         </SidebarMenuItem>
       </SidebarMenu>
     )
@@ -126,14 +149,33 @@ export function TeamSwitcher({
               </DropdownMenuItem>
             ))}
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="gap-2 p-2" onClick={handleAddTeam}>
-              <div className="flex size-6 items-center justify-center rounded-md border bg-transparent">
-                <Plus className="size-4" />
-              </div>
-              <div className="text-muted-foreground font-medium">
-                {isTeamOwner ? 'Add team' : 'Join team'}
-              </div>
-            </DropdownMenuItem>
+            {isTeamOwner ? (
+              <DropdownMenuItem className="gap-2 p-2" onClick={handleAddTeam}>
+                <div className="flex size-6 items-center justify-center rounded-md border bg-transparent">
+                  <Plus className="size-4" />
+                </div>
+                <div className="text-muted-foreground font-medium">
+                  Add team
+                </div>
+              </DropdownMenuItem>
+            ) : (
+              <JoinTeamDialog
+                trigger={
+                  <DropdownMenuItem className="gap-2 p-2" onSelect={(e) => e.preventDefault()}>
+                    <div className="flex size-6 items-center justify-center rounded-md border bg-transparent">
+                      <Plus className="size-4" />
+                    </div>
+                    <div className="text-muted-foreground font-medium">
+                      Join team
+                    </div>
+                  </DropdownMenuItem>
+                }
+                onSuccess={() => {
+                  // Refresh the page to show the new team
+                  router.reload()
+                }}
+              />
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       </SidebarMenuItem>

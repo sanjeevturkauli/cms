@@ -1,5 +1,5 @@
-import { Head, router } from '@inertiajs/react';
-import { Users, Trash2, Edit, BadgeCheckIcon, Search, RefreshCw } from 'lucide-react';
+import { Head, router, useForm } from '@inertiajs/react';
+import { Users, Trash2, Edit, BadgeCheckIcon, Search, RefreshCw, Plus, UserPlus } from 'lucide-react';
 import { useState } from 'react';
 
 import { AppSidebar } from '@/components/app-sidebar';
@@ -32,9 +32,20 @@ import {
     AlertDialogTitle,
     AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Spinner } from '@/components/ui/spinner';
 import {
     Select,
     SelectContent,
@@ -87,6 +98,19 @@ export default function MembersIndex({ members, team, permissions, roles }: Prop
     const [roleFilter, setRoleFilter] = useState<string>('all');
     const [statusFilter, setStatusFilter] = useState<string>('all');
     const [isRefreshing, setIsRefreshing] = useState(false);
+    const [showJoinDialog, setShowJoinDialog] = useState(false);
+
+    // useForm for Join Team
+    const {
+        data: joinData,
+        setData: setJoinData,
+        post: joinPost,
+        processing: joinProcessing,
+        errors: joinErrors,
+        reset: joinReset,
+    } = useForm({
+        team_code: '',
+    });
 
     // Filter members based on search and filters
     const filteredMembers = members.filter((member) => {
@@ -144,6 +168,25 @@ export default function MembersIndex({ members, team, permissions, roles }: Prop
         );
     };
 
+    const handleJoinTeam = (e: React.FormEvent) => {
+        e.preventDefault();
+
+        joinPost('/team/join', {
+            onSuccess: () => {
+                joinReset();
+                setShowJoinDialog(false);
+                toast.success('Successfully joined the team!');
+            },
+            onError: (errors) => {
+                if (errors.team_code) {
+                    toast.error(errors.team_code);
+                } else {
+                    toast.error('Failed to join team. Please try again.');
+                }
+            }
+        });
+    };
+
     return (
         <SidebarProvider
             style={
@@ -176,16 +219,78 @@ export default function MembersIndex({ members, team, permissions, roles }: Prop
                                                 Total {filteredMembers.length} of {members.length} member{members.length !== 1 ? 's' : ''}
                                             </CardDescription>
                                         </div>
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={handleRefresh}
-                                            disabled={isRefreshing}
-                                            className="flex items-center gap-2  cursor-pointer"
-                                        >
-                                            <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-                                            {isRefreshing ? 'Refreshing...' : 'Refresh'}
-                                        </Button>
+                                        <div className="flex items-center gap-2">
+                                            <Dialog open={showJoinDialog} onOpenChange={setShowJoinDialog}>
+                                                <DialogTrigger asChild>
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        className="flex items-center gap-2 cursor-pointer"
+                                                    >
+                                                        <UserPlus className="h-4 w-4" />
+                                                        Join Team
+                                                    </Button>
+                                                </DialogTrigger>
+                                                <DialogContent>
+                                                    <form onSubmit={handleJoinTeam}>
+                                                        <DialogHeader>
+                                                            <DialogTitle>Join a Team</DialogTitle>
+                                                            <DialogDescription>
+                                                                Enter the team code to join an existing team.
+                                                            </DialogDescription>
+                                                        </DialogHeader>
+
+                                                        <div className="grid gap-4 py-4">
+                                                            <div className="grid gap-2">
+                                                                <Label htmlFor="team_code">
+                                                                    Team Code
+                                                                </Label>
+                                                                <Input
+                                                                    id="team_code"
+                                                                    value={joinData.team_code}
+                                                                    onChange={(e) =>
+                                                                        setJoinData(
+                                                                            'team_code',
+                                                                            e.target.value.toUpperCase(),
+                                                                        )
+                                                                    }
+                                                                    placeholder="Enter team code (e.g., ABC123)"
+                                                                    required
+                                                                />
+                                                                {joinErrors.team_code && (
+                                                                    <p className="text-sm text-red-500">
+                                                                        {joinErrors.team_code}
+                                                                    </p>
+                                                                )}
+                                                            </div>
+                                                        </div>
+
+                                                        <DialogFooter>
+                                                            <Button
+                                                                type="submit"
+                                                                disabled={joinProcessing}
+                                                                className="cursor-pointer"
+                                                            >
+                                                                {joinProcessing && (
+                                                                    <Spinner className="mr-2" />
+                                                                )}
+                                                                Join Team
+                                                            </Button>
+                                                        </DialogFooter>
+                                                    </form>
+                                                </DialogContent>
+                                            </Dialog>
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={handleRefresh}
+                                                disabled={isRefreshing}
+                                                className="flex items-center gap-2  cursor-pointer"
+                                            >
+                                                <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                                                {isRefreshing ? 'Refreshing...' : 'Refresh'}
+                                            </Button>
+                                        </div>
                                     </div>
                                 </CardHeader>
                                 <CardContent>
