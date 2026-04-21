@@ -133,18 +133,20 @@ export default function TeamInfoPage({ team, teamInfo, permissions }: Props) {
     const handleSave = (section: string) => {
         let form;
         let url;
+        const encryptedId = team.encrypted_id || team.id;
+        
         switch (section) {
             case 'plan':
                 form = planForm;
-                url = `/teams/${team.id}/info/plan`;
+                url = `/team/${encryptedId}/info/plan`;
                 break;
             case 'location':
                 form = locationForm;
-                url = `/teams/${team.id}/info/location`;
+                url = `/team/${encryptedId}/info/location`;
                 break;
             case 'details':
                 form = detailsForm;
-                url = `/teams/${team.id}/info/basic`;
+                url = `/team/${encryptedId}/info/basic`;
                 break;
             default:
                 return;
