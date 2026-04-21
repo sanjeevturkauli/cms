@@ -2,10 +2,10 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Team extends Model
 {
@@ -35,7 +35,6 @@ class Team extends Model
             }
         });
 
-        // When a team is deleted, also delete all its members
         static::deleting(function ($team) {
             $team->members()->delete();
         });
@@ -46,7 +45,6 @@ class Team extends Model
         return $this->belongsTo(User::class);
     }
 
-    // Alias for user relationship (team owner)
     public function owner(): BelongsTo
     {
         return $this->user();
@@ -70,5 +68,25 @@ class Team extends Model
     public function activeSubscription()
     {
         return $this->hasOne(Subscription::class)->where('status', 'active');
+    }
+
+    public function scopeIsActive($query)
+    {
+        return $query->where('is_active', true);
+    }
+
+    public function scopeIsApproved($query)
+    {
+        return $query->where('status', 'active');
+    }
+
+    public function scopeIsPending($query)
+    {
+        return $query->where('status', 'pending');
+    }
+
+    public function scopeActive($query)
+    {
+        return $query->where('is_active', true)->where('status', 'active');
     }
 }

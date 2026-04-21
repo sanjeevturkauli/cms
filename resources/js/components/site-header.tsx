@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { SidebarTrigger } from "@/components/ui/sidebar"
+import { ThemeToggle } from "@/components/theme-toggle"
 import { usePage } from "@inertiajs/react"
 import { Wallet } from "lucide-react"
 import { SharedData } from "@/types"
@@ -40,6 +41,7 @@ export function SiteHeader() {
               <span className="text-sm font-semibold text-green-700">{wallet.balance}</span>
             </div>
           )}
+          <ThemeToggle />
           <Button variant="ghost" size="sm" className="hidden sm:flex cursor-pointer">
             {role ? role.charAt(0).toUpperCase() + role.slice(1) : ''}
           </Button>

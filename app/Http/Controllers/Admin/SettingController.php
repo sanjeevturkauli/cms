@@ -42,7 +42,6 @@ class SettingController extends Controller
                 $setting = Setting::where('key', $key)->first();
                 
                 if ($setting) {
-                    // Convert value based on type
                     $storedValue = match($setting->type) {
                         'boolean' => ($value === '1' || $value === 1 || $value === true || $value === 'true') ? '1' : '0',
                         'json' => json_encode($value),

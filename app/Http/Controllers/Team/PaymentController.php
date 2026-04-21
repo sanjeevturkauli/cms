@@ -30,7 +30,6 @@ class PaymentController extends Controller
         $team = Team::findOrFail($request->team_id);
         $package = Package::findOrFail($request->package_id);
 
-        // Check if user owns the team
         if ($team->user_id !== $user->id) {
             if ($request->expectsJson()) {
                 return response()->json(['error' => 'You can only subscribe for teams you own.'], 403);
@@ -38,7 +37,6 @@ class PaymentController extends Controller
             return redirect()->back()->with('error', 'You can only subscribe for teams you own.');
         }
 
-        // Check if selected gateway is enabled
         $gatewayEnabled = Setting::get($request->payment_gateway . '_enabled', false);
         if (!$gatewayEnabled) {
             if ($request->expectsJson()) {
@@ -47,10 +45,8 @@ class PaymentController extends Controller
             return redirect()->back()->with('error', 'Selected payment gateway is not enabled. Please contact admin.');
         }
 
-        // Calculate amount
         $amount = $package->price * $package->duration;
 
-        // Create payment transaction
         $transaction = PaymentTransaction::create([
             'user_id' => $user->id,
             'team_id' => $team->id,
@@ -66,7 +62,6 @@ class PaymentController extends Controller
             'customer_phone' => $user->mobile ?? null,
         ]);
 
-        // Return payment details based on gateway
         return match ($request->payment_gateway) {
             'razorpay' => $this->initiateRazorpay($transaction, $package, $team),
             'stripe' => $this->initiateStripe($transaction, $package, $team, $request->expectsJson()),
@@ -88,7 +83,6 @@ class PaymentController extends Controller
         }
 
         try {
-            // Create Razorpay order using cURL (since we don't have SDK)
             $orderData = [
                 'amount' => $transaction->amount * 100, // Amount in paise
                 'currency' => $transaction->currency,
@@ -115,12 +109,6 @@ class PaymentController extends Controller
             curl_close($ch);
 
             if ($httpCode !== 200) {
-                \Log::error('Razorpay API Error', [
-                    'http_code' => $httpCode,
-                    'response' => $response,
-                    'transaction_id' => $transaction->transaction_id,
-                ]);
-                
                 return response()->json([
                     'success' => false,
                     'error' => 'Failed to create Razorpay order. Please check your API credentials.',
@@ -128,7 +116,7 @@ class PaymentController extends Controller
             }
 
             $orderResponse = json_decode($response, true);
-            
+
             if (!$orderResponse || !isset($orderResponse['id'])) {
                 return response()->json([
                     'success' => false,
@@ -136,7 +124,6 @@ class PaymentController extends Controller
                 ]);
             }
 
-            // Update transaction with Razorpay order ID
             $transaction->update([
                 'gateway_transaction_id' => $orderResponse['id'],
             ]);
@@ -150,13 +137,6 @@ class PaymentController extends Controller
                 'package_name' => $package->name,
             ]);
         } catch (\Exception $e) {
-            \Log::error('Razorpay payment initiation failed', [
-                'error' => $e->getMessage(),
-                'transaction_id' => $transaction->transaction_id,
-                'team_id' => $team->id,
-                'package_id' => $package->id,
-            ]);
-            
             return response()->json([
                 'success' => false,
                 'error' => 'Failed to create Razorpay order: ' . $e->getMessage(),
@@ -177,12 +157,10 @@ class PaymentController extends Controller
         }
 
         try {
-            // Initialize Stripe
             Stripe::setApiKey($secretKey);
 
-            // Create a Payment Intent
             $paymentIntent = PaymentIntent::create([
-                'amount' => (int) ($transaction->amount * 100),
+                'amount' => (int) ($transaction->amount * 100), // Amount in cents
                 'currency' => strtolower($transaction->currency),
                 'description' => $transaction->description,
                 'metadata' => [
@@ -191,9 +169,9 @@ class PaymentController extends Controller
                     'package_id' => $package->id,
                     'user_id' => auth()->id(),
                 ],
-                // Only specify payment_method_types, not payment_method_data
-                // Client will provide payment method via Stripe Elements
-                'payment_method_types' => ['card'],
+                'automatic_payment_methods' => [
+                    'enabled' => true,
+                ],
             ]);
 
             $transaction->update([
@@ -205,6 +183,32 @@ class PaymentController extends Controller
                 'client_secret' => $paymentIntent->client_secret,
                 'transaction_id' => $transaction->transaction_id,
                 'amount' => $transaction->amount,
+                'publishable_key' => $publicKey,
+            ]);
+        } catch (\Stripe\Exception\CardException $e) {
+            return response()->json([
+                'success' => false,
+                'error' => 'Card Error: ' . $e->getMessage(),
+            ]);
+        } catch (\Stripe\Exception\RateLimitException $e) {
+            return response()->json([
+                'success' => false,
+                'error' => 'Too many requests. Please try again later.',
+            ]);
+        } catch (\Stripe\Exception\InvalidRequestException $e) {
+            return response()->json([
+                'success' => false,
+                'error' => 'Invalid payment request. Please check your payment details.',
+            ]);
+        } catch (\Stripe\Exception\AuthenticationException $e) {
+            return response()->json([
+                'success' => false,
+                'error' => 'Stripe authentication failed. Please contact admin.',
+            ]);
+        } catch (\Stripe\Exception\ApiConnectionException $e) {
+            return response()->json([
+                'success' => false,
+                'error' => 'Network error. Please check your connection and try again.',
             ]);
         } catch (\Stripe\Exception\ApiErrorException $e) {
             return response()->json([
@@ -214,7 +218,7 @@ class PaymentController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'error' => 'Failed to initialize payment: ' . $e->getMessage(),
+                'error' => 'Failed to initialize payment. Please try again.',
             ]);
         }
     }
@@ -228,8 +232,6 @@ class PaymentController extends Controller
             return redirect()->back()->with('error', 'PayPal is not configured properly. Please contact admin.');
         }
 
-        // PayPal integration - Coming soon
-        // For now, redirect back with info message
         return redirect()->back()->with('error', 'PayPal payment integration is under development. Please use Razorpay for now.');
     }
 
@@ -244,35 +246,27 @@ class PaymentController extends Controller
 
         $transaction = PaymentTransaction::where('transaction_id', $request->transaction_id)->firstOrFail();
 
-        // Verify payment with Razorpay signature
         $keySecret = Setting::get('razorpay_key_secret');
-        
+
         if ($request->razorpay_signature && $request->razorpay_order_id) {
-            // Verify signature
-            $expectedSignature = hash_hmac('sha256', 
-                $request->razorpay_order_id . '|' . $request->razorpay_payment_id, 
+            $expectedSignature = hash_hmac(
+                'sha256',
+                $request->razorpay_order_id . '|' . $request->razorpay_payment_id,
                 $keySecret
             );
-            
+
             if ($expectedSignature !== $request->razorpay_signature) {
-                \Log::error('Razorpay signature verification failed', [
-                    'transaction_id' => $request->transaction_id,
-                    'expected' => $expectedSignature,
-                    'received' => $request->razorpay_signature,
-                ]);
-                
                 $transaction->update([
                     'status' => 'failed',
                     'gateway_response' => $request->all(),
                 ]);
-                
+
                 return redirect()
                     ->route('team.subscriptions.index')
                     ->with('error', 'Payment verification failed. Please contact support.');
             }
         }
 
-        // Mark transaction as completed
         $transaction->update([
             'status' => 'completed',
             'gateway_payment_id' => $request->razorpay_payment_id,
@@ -281,7 +275,6 @@ class PaymentController extends Controller
             'gateway_response' => $request->all(),
         ]);
 
-        // Create or update subscription
         $this->createSubscription($transaction);
 
         return redirect()
@@ -299,15 +292,12 @@ class PaymentController extends Controller
         $transaction = PaymentTransaction::where('transaction_id', $request->transaction_id)->firstOrFail();
 
         try {
-            // Initialize Stripe
             $secretKey = Setting::get('stripe_secret_key');
             \Stripe\Stripe::setApiKey($secretKey);
 
-            // Retrieve the payment intent to verify
             $paymentIntent = \Stripe\PaymentIntent::retrieve($request->payment_intent);
 
             if ($paymentIntent->status === 'succeeded') {
-                // Mark transaction as completed
                 $transaction->update([
                     'status' => 'completed',
                     'gateway_payment_id' => $paymentIntent->id,
@@ -316,7 +306,6 @@ class PaymentController extends Controller
                     'gateway_response' => $paymentIntent->toArray(),
                 ]);
 
-                // Create or update subscription
                 $this->createSubscription($transaction);
 
                 return redirect()
@@ -333,8 +322,6 @@ class PaymentController extends Controller
                     ->with('error', 'Payment was not successful. Please try again.');
             }
         } catch (\Exception $e) {
-            \Log::error('Stripe Callback Error: ' . $e->getMessage());
-
             return redirect()
                 ->route('team.subscriptions.index')
                 ->with('error', 'Payment verification failed. Please contact support.');
@@ -377,21 +364,17 @@ class PaymentController extends Controller
         $team = $transaction->team;
         $package = $transaction->package;
 
-        // Check for existing active subscription
         $existingSubscription = Subscription::where('team_id', $team->id)
             ->where('status', 'active')
             ->first();
 
         if ($existingSubscription) {
-            // Cancel existing subscription and save immediately
             $existingSubscription->status = 'cancelled';
             $existingSubscription->save();
 
-            // Refresh to ensure the change is committed
             $existingSubscription->refresh();
         }
 
-        // Create new subscription
         $startDate = Carbon::now();
         $endDate = $startDate->copy()->addYears($package->duration);
 
@@ -406,10 +389,13 @@ class PaymentController extends Controller
             'package_features' => $package->features,
         ]);
 
-        // Update transaction with subscription ID
+        $team->update([
+            'is_active' => true,
+            'status' => 'active',
+        ]);
+
         $transaction->update(['subscription_id' => $subscription->id]);
 
-        // Log the subscription
         SubscriptionLog::create([
             'user_id' => $user->id,
             'team_id' => $team->id,

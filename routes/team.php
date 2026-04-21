@@ -16,16 +16,16 @@ use Inertia\Inertia;
  * |
  */
 
-// Subscription Management Routes (no subscription check needed)
-Route::group(['prefix' => 'subscriptions', 'as' => 'subscriptions.'], function () {
+// Subscription Management Routes (no subscription check needed, blocked for admin)
+Route::middleware('role:team|member')->prefix('subscriptions')->name('subscriptions.')->group(function () {
     Route::get('/', [\App\Http\Controllers\Team\SubscriptionController::class, 'index'])->name('index');
     Route::post('/subscribe', [\App\Http\Controllers\Team\SubscriptionController::class, 'subscribe'])->name('subscribe');
     Route::patch('/{subscription}/cancel', [\App\Http\Controllers\Team\SubscriptionController::class, 'cancel'])->name('cancel');
     Route::get('/logs', [\App\Http\Controllers\Team\SubscriptionController::class, 'logs'])->name('logs');
 });
 
-// Payment Routes (no subscription check needed)
-Route::group(['prefix' => 'payment', 'as' => 'payment.'], function () {
+// Payment Routes (no subscription check needed, blocked for admin)
+Route::middleware('role:team|member')->prefix('payment')->name('payment.')->group(function () {
     Route::post('/initiate', [\App\Http\Controllers\Team\PaymentController::class, 'initiatePayment'])->name('initiate');
     Route::post('/callback/razorpay', [\App\Http\Controllers\Team\PaymentController::class, 'razorpayCallback'])->name('callback.razorpay');
     Route::post('/callback/stripe', [\App\Http\Controllers\Team\PaymentController::class, 'stripeCallback'])->name('callback.stripe');

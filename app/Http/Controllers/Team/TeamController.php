@@ -8,6 +8,7 @@ use App\Models\Team;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
+use Illuminate\Validation\ValidationException;
 
 class TeamController extends Controller
 {
@@ -102,7 +103,13 @@ class TeamController extends Controller
             'team_code' => ['required', 'string', 'size:8', 'exists:teams,team_id'],
         ]);
 
-        $team = Team::where('team_id', $request->team_code)->first();
+        $team = Team::where('team_id', $request->team_code)->where('is_active', true)->where('status', 'approved')->first();
+
+        if (!$team) {
+            throw ValidationException::withMessages([
+                'team_code' => 'This team is not available right now. Please contact the team administrator for help.',
+            ]);
+        }
 
         // Check if user is already a member
         $existingMember = Member::where('user_id', Auth::id())

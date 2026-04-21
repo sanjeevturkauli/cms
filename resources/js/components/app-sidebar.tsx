@@ -78,6 +78,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                             url: teamsMembersIndex()?.url,
                             isActive: routeName === 'teams.members' || routeName === 'team.members',
                         },
+                        {
+                            title: 'Subscriptions',
+                            url: '/team/subscriptions',
+                            isActive: routeName === 'team.subscriptions.index',
+                        },
                     ],
                 },
             ]
@@ -90,6 +95,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     url: '/teams',
                     icon: Users,
                     isActive: routeName === 'teams.index',
+                },
+                {
+                    title: 'Subscriptions',
+                    url: '/team/subscriptions',
+                    icon: Package,
+                    isActive: routeName === 'team.subscriptions.index',
                 },
             ]
             : []),
@@ -154,7 +165,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     isActive: routeName === 'admin.transactions.index' || routeName === 'admin.transactions.show',
                 },
                 {
-                    title: 'Settings',
+                    title: 'Site Settings',
                     url: settingsIndex()?.url,
                     icon: Settings,
                     isActive: routeName === 'admin.settings.index',

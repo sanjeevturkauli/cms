@@ -14,28 +14,25 @@ class TransactionController extends Controller
         $query = PaymentTransaction::with(['user', 'team', 'package', 'subscription'])
             ->orderBy('created_at', 'desc');
 
-        // Search filter
         if ($request->has('search') && $request->search) {
             $search = $request->search;
-            $query->where(function($q) use ($search) {
+            $query->where(function ($q) use ($search) {
                 $q->where('transaction_id', 'like', "%{$search}%")
-                  ->orWhere('gateway_payment_id', 'like', "%{$search}%")
-                  ->orWhereHas('user', function($q) use ($search) {
-                      $q->where('name', 'like', "%{$search}%")
-                        ->orWhere('email', 'like', "%{$search}%");
-                  })
-                  ->orWhereHas('team', function($q) use ($search) {
-                      $q->where('name', 'like', "%{$search}%");
-                  });
+                    ->orWhere('gateway_payment_id', 'like', "%{$search}%")
+                    ->orWhereHas('user', function ($q) use ($search) {
+                        $q->where('name', 'like', "%{$search}%")
+                            ->orWhere('email', 'like', "%{$search}%");
+                    })
+                    ->orWhereHas('team', function ($q) use ($search) {
+                        $q->where('name', 'like', "%{$search}%");
+                    });
             });
         }
 
-        // Status filter
         if ($request->has('status') && $request->status) {
             $query->where('status', $request->status);
         }
 
-        // Payment gateway filter
         if ($request->has('gateway') && $request->gateway) {
             $query->where('payment_gateway', $request->gateway);
         }
@@ -94,7 +91,7 @@ class TransactionController extends Controller
                 'transaction_id' => $transaction->transaction_id,
                 'gateway_transaction_id' => $transaction->gateway_transaction_id,
                 'gateway_payment_id' => $transaction->gateway_payment_id,
-                
+
                 'user' => [
                     'id' => $transaction->user->id,
                     'name' => $transaction->user->name,
@@ -102,7 +99,7 @@ class TransactionController extends Controller
                     'mobile' => $transaction->user->mobile,
                     'wallet_balance' => $transaction->user->wallet ? $transaction->user->wallet->formatted_balance : '₹0.00',
                 ],
-                
+
                 'team' => $transaction->team ? [
                     'id' => $transaction->team->id,
                     'name' => $transaction->team->name,
@@ -112,7 +109,7 @@ class TransactionController extends Controller
                         'email' => $transaction->team->owner->email,
                     ],
                 ] : null,
-                
+
                 'package' => $transaction->package ? [
                     'name' => $transaction->package->name,
                     'price' => $transaction->package->formatted_price,
@@ -120,7 +117,7 @@ class TransactionController extends Controller
                     'person' => $transaction->package->formatted_person,
                     'features' => $transaction->package->features,
                 ] : null,
-                
+
                 'subscription' => $transaction->subscription ? [
                     'id' => $transaction->subscription->id,
                     'start_date' => $transaction->subscription->start_date->format('M d, Y'),
@@ -128,7 +125,7 @@ class TransactionController extends Controller
                     'status' => $transaction->subscription->status,
                     'days_remaining' => $transaction->subscription->days_remaining,
                 ] : null,
-                
+
                 'amount' => $transaction->formatted_amount,
                 'currency' => $transaction->currency,
                 'payment_gateway' => ucfirst($transaction->payment_gateway),
@@ -137,7 +134,7 @@ class TransactionController extends Controller
                 'description' => $transaction->description,
                 'customer_email' => $transaction->customer_email,
                 'customer_phone' => $transaction->customer_phone,
-                
+
                 'created_at' => $transaction->created_at->format('M d, Y H:i:s'),
                 'completed_at' => $transaction->completed_at ? $transaction->completed_at->format('M d, Y H:i:s') : null,
                 'failed_at' => $transaction->failed_at ? $transaction->failed_at->format('M d, Y H:i:s') : null,
@@ -148,7 +145,7 @@ class TransactionController extends Controller
 
     private function getStatusBadge($status)
     {
-        return match($status) {
+        return match ($status) {
             'completed' => ['text' => 'Completed', 'color' => 'green'],
             'pending' => ['text' => 'Pending', 'color' => 'yellow'],
             'failed' => ['text' => 'Failed', 'color' => 'red'],

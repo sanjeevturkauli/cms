@@ -37,9 +37,21 @@ class FortifyServiceProvider extends ServiceProvider
         Fortify::authenticateUsing(function (Request $request) {
             $user = User::where('email', $request->email)->first();
 
+            if (!$user) {
+                throw ValidationException::withMessages([
+                    Fortify::username() => __('These credentials do not match our records.'),
+                ]);
+            }
+
             if (!$user->is_active) {
                 throw ValidationException::withMessages([
                     Fortify::username() => __('Your account is inactive. Please contact support.'),
+                ]);
+            }
+
+            if (!\Illuminate\Support\Facades\Hash::check($request->password, $user->password)) {
+                throw ValidationException::withMessages([
+                    Fortify::username() => __('These credentials do not match our records.'),
                 ]);
             }
 

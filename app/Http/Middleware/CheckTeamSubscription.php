@@ -27,14 +27,14 @@ class CheckTeamSubscription
             return $next($request);
         }
 
-        // Only check for team role users
+        // Check for team role users
         if ($user->hasRole('team')) {
             // Get user's teams
             $teams = Team::where('user_id', $user->id)->get();
 
             if ($teams->isEmpty()) {
                 // No teams found, redirect to create team
-                return redirect()->route('teams.index')->with('error', 'Please create a team first.');
+                return redirect()->route('team.subscriptions.index')->with('error', 'Please create a team first.');
             }
 
             // Check if any team has an active subscription
@@ -55,6 +55,32 @@ class CheckTeamSubscription
                 !$request->routeIs('team.subscriptions.*') &&
                 !$request->routeIs('team.payment.*')) {
                 return redirect()->route('team.subscriptions.index')->with('error', 'Please subscribe to a package to access team features.');
+            }
+        }
+
+        // Check for member role users
+        if ($user->hasRole('member')) {
+            // Get member's team
+            $member = \App\Models\Member::where('user_id', $user->id)->first();
+
+            if (!$member) {
+                return redirect()->route('teams.index')->with('error', 'You are not a member of any team.');
+            }
+
+            $team = $member->team;
+
+            // Check if team is active
+            if (!$team->is_active) {
+                return redirect()->route('teams.index')->with('error', 'Your team is currently inactive. Please contact your team administrator.');
+            }
+
+            // Check if team has an active subscription
+            $subscription = Subscription::where('team_id', $team->id)
+                ->where('status', 'active')
+                ->first();
+
+            if (!$subscription || !$subscription->is_active) {
+                return redirect()->route('teams.index')->with('error', 'Your team does not have an active subscription. Please contact your team administrator.');
             }
         }
 

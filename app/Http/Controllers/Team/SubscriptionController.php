@@ -19,7 +19,6 @@ class SubscriptionController extends Controller
     {
         $user = Auth::user();
         
-        // Ensure user has a wallet
         if (!$user->wallet) {
             $user->wallet()->create(['balance' => 0.00]);
         }
@@ -63,7 +62,6 @@ class SubscriptionController extends Controller
             ];
         });
 
-        // Get payment gateway settings
         $paymentGateways = [
             'stripe' => [
                 'enabled' => \App\Models\Setting::get('stripe_enabled', false),
@@ -113,14 +111,12 @@ class SubscriptionController extends Controller
             return redirect()->back()->with('error', 'You can only subscribe for teams you own.');
         }
 
-        // Ensure user has a wallet
         if (!$user->wallet) {
             $user->wallet()->create(['balance' => 0.00]);
         }
 
         $newPackage = Package::findOrFail($request->package_id);
         
-        // Find existing active subscription for this USER (not just team)
         $existingSubscription = Subscription::where('team_id', $team->id)
             ->where('status', 'active')
             ->first();
@@ -133,30 +129,25 @@ class SubscriptionController extends Controller
         $remainingDays = 0;
 
         if ($existingSubscription) {
-            // Calculate pro-rated amounts for upgrade/downgrade
             $currentPackage = $existingSubscription->package;
             $daysUsed = Carbon::now()->diffInDays($existingSubscription->start_date);
             $totalDaysInYear = 365;
             $remainingDays = max(0, $totalDaysInYear - $daysUsed);
             
-            // Calculate unused amount from current package
             $dailyRateOld = ($currentPackage->price * $existingSubscription->duration_years) / $totalDaysInYear;
             $unusedAmount = $dailyRateOld * $remainingDays;
             
-            // Calculate amount needed for new package for remaining days
             $dailyRateNew = ($newPackage->price * $newPackage->duration) / $totalDaysInYear;
             $newPackageAmount = $dailyRateNew * $remainingDays;
             
             $difference = $newPackageAmount - $unusedAmount;
             
             if ($difference > 0) {
-                // Upgrade: User needs to pay difference
                 $totalAmount = $difference;
                 $action = 'upgrade';
                 $message = "Upgraded to {$newPackage->name}. Amount charged: ₹" . number_format($totalAmount, 2);
                 
             } elseif ($difference < 0) {
-                // Downgrade: Refund to wallet
                 $refundAmount = abs($difference);
                 $user->wallet->addMoney(
                     $refundAmount, 
@@ -164,17 +155,15 @@ class SubscriptionController extends Controller
                     'subscription_downgrade',
                     $existingSubscription->id
                 );
-                $totalAmount = -$refundAmount; // Negative for refund
+                $totalAmount = -$refundAmount; 
                 $action = 'downgrade';
                 $message = "Downgraded to {$newPackage->name}. Refund added to wallet: ₹" . number_format($refundAmount, 2);
                 
             } else {
-                // Same amount: No additional charge
-                $action = 'upgrade'; // Consider it as upgrade for logging
+                $action = 'upgrade'; 
                 $message = "Switched to {$newPackage->name} package. No additional charge.";
             }
             
-            // UPDATE existing subscription instead of creating new one
             $existingSubscription->update([
                 'package_id' => $newPackage->id,
                 'start_date' => Carbon::now(),
@@ -184,14 +173,17 @@ class SubscriptionController extends Controller
                 'package_features' => $newPackage->features,
             ]);
             
+            $team->update([
+                'is_active' => true,
+                'status' => 'active',
+            ]);
+            
             $subscriptionId = $existingSubscription->id;
             
         } else {
-            // New subscription: Full amount
             $totalAmount = $newPackage->price * $newPackage->duration;
             $message = "Successfully subscribed to {$newPackage->name} package. Total: ₹" . number_format($totalAmount, 0);
             
-            // Create new subscription
             $startDate = Carbon::now();
             $endDate = $startDate->copy()->addYears($newPackage->duration);
 
@@ -206,12 +198,16 @@ class SubscriptionController extends Controller
                 'package_features' => $newPackage->features,
             ]);
             
+            $team->update([
+                'is_active' => true,
+                'status' => 'active',
+            ]);
+            
             $subscriptionId = $newSubscription->id;
         }
 
         $walletBalanceAfter = $user->wallet->fresh()->balance;
 
-        // Log the subscription action
         SubscriptionLog::create([
             'user_id' => $user->id,
             'team_id' => $team->id,
@@ -244,7 +240,6 @@ class SubscriptionController extends Controller
             return redirect()->back()->with('error', 'Only active subscriptions can be cancelled.');
         }
 
-        // Check if user has sufficient balance for cancellation fee
         $cancellationFee = \App\Models\Setting::get('cancellation_fee', 500);
         if (!$user->wallet || $user->wallet->balance < $cancellationFee) {
             return redirect()->back()->with('error', "Insufficient wallet balance. You need ₹{$cancellationFee} for cancellation fee. Please add money to your wallet first.");
@@ -252,7 +247,6 @@ class SubscriptionController extends Controller
 
         $walletBalanceBefore = $user->wallet->balance;
         
-        // Deduct cancellation fee from user's wallet
         $user->wallet->deductMoney(
             $cancellationFee,
             "Cancellation fee for {$subscription->package->name} subscription",
@@ -260,18 +254,15 @@ class SubscriptionController extends Controller
             $subscription->id
         );
 
-        // Transfer fee to admin wallet
         $admin = User::whereHas('roles', function($query) {
             $query->where('name', 'admin');
         })->first();
 
         if ($admin) {
-            // Ensure admin has a wallet
             if (!$admin->wallet) {
                 $admin->wallet()->create(['balance' => 0.00]);
             }
 
-            // Add money to admin wallet
             $admin->wallet->addMoney(
                 $cancellationFee,
                 "Cancellation fee received from {$user->name} for subscription cancellation",
@@ -280,10 +271,8 @@ class SubscriptionController extends Controller
             );
         }
 
-        // Cancel the subscription
         $subscription->cancel();
 
-        // Log the cancellation
         SubscriptionLog::create([
             'user_id' => $user->id,
             'team_id' => $subscription->team_id,
@@ -293,7 +282,7 @@ class SubscriptionController extends Controller
             'to_package' => 'None',
             'from_price' => $subscription->package->price,
             'to_price' => 0,
-            'amount_charged' => $cancellationFee, // Positive because it's a charge
+            'amount_charged' => $cancellationFee, 
             'wallet_balance_before' => $walletBalanceBefore,
             'wallet_balance_after' => $user->wallet->fresh()->balance,
             'days_used' => Carbon::now()->diffInDays($subscription->start_date),
@@ -311,7 +300,7 @@ class SubscriptionController extends Controller
         $logs = SubscriptionLog::where('user_id', $user->id)
             ->with(['team', 'subscription.package'])
             ->orderBy('created_at', 'desc')
-            ->limit(50) // Limit for dialog display
+            ->limit(50) 
             ->get()
             ->map(function ($log) {
                 return [
@@ -329,7 +318,6 @@ class SubscriptionController extends Controller
                 ];
             });
 
-        // Return JSON for AJAX requests
         if ($request->wantsJson() || $request->ajax()) {
             return response()->json([
                 'logs' => [

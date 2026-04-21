@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { router } from "@inertiajs/react"
+import { router, usePage } from "@inertiajs/react"
 import {
   BadgeCheck,
   Bell,
@@ -30,12 +30,14 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar"
-import { User } from "@/types"
+import { User, SharedData } from "@/types"
 
 
 export function NavUser({user}: {user: User}) {
   const { isMobile } = useSidebar()
   const [isLoggingOut, setIsLoggingOut] = useState(false)
+  const { props: pageProps } = usePage<SharedData>()
+  const isAdmin = (pageProps.isAdmin || false) as boolean
 
   const handleLogout = () => {
     setIsLoggingOut(true)
@@ -83,13 +85,17 @@ export function NavUser({user}: {user: User}) {
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuGroup>
-              <DropdownMenuItem onClick={() => router.get('/team/subscriptions')} className="cursor-pointer">
-                <Sparkles />
-                Subscriptions
-              </DropdownMenuItem>
-            </DropdownMenuGroup>
-            <DropdownMenuSeparator />
+            {!isAdmin && (
+              <>
+                <DropdownMenuGroup>
+                  <DropdownMenuItem onClick={() => router.get('/team/subscriptions')} className="cursor-pointer">
+                    <Sparkles />
+                    Subscriptions
+                  </DropdownMenuItem>
+                </DropdownMenuGroup>
+                <DropdownMenuSeparator />
+              </>
+            )}
             <DropdownMenuGroup>
               <DropdownMenuItem className="cursor-pointer" onClick={() => router.get('/settings/profile')}>
                 <BadgeCheck />

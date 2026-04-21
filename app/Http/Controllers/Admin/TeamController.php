@@ -119,7 +119,6 @@ class TeamController extends Controller
             return redirect()->back()->with('error', 'You do not have permission to delete teams.');
         }
 
-        // For admin, check if team owner has other teams (unless admin override)
         if (!$user->hasRole('admin')) {
             $totalTeamsOwned = Team::where('user_id', $team->user_id)->count();
             if ($totalTeamsOwned <= 1) {
