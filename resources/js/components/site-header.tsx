@@ -21,24 +21,24 @@ export function SiteHeader() {
   const role = props.auth?.user?.roles && props.auth.user.roles.length > 0 ? props.auth.user.roles[0].name : "";
 
   return (
-    <header className="flex h-(--header-height) shrink-0 items-center gap-2 border-b">
-      <div className="flex w-full items-center gap-1 px-4 lg:gap-2 lg:px-6">
-        <SidebarTrigger className="-ml-1" />
+    <header className="flex h-(--header-height) shrink-0 items-center gap-2 border-b overflow-hidden">
+      <div className="flex w-full min-w-0 items-center gap-1 px-4 lg:gap-2 lg:px-6">
+        <SidebarTrigger className="-ml-1 shrink-0" />
 
         <Separator
           orientation="vertical"
-          className="mx-2 data-[orientation=vertical]:h-4"
+          className="mx-2 shrink-0 data-[orientation=vertical]:h-4"
         />
 
-        <h1 className="text-base font-medium capitalize">
+        <h1 className="text-base font-medium capitalize truncate min-w-0 flex-1">
           {activePage}
         </h1>
 
-        <div className="ml-auto flex items-center gap-2">
+        <div className="ml-auto flex shrink-0 items-center gap-2">
           {wallet && (
-            <div className="flex items-center gap-2 px-3 py-1 bg-green-50 rounded-lg border border-green-200">
-              <Wallet className="h-4 w-4 text-green-600" />
-              <span className="text-sm font-semibold text-green-700">{wallet.balance}</span>
+            <div className="flex items-center gap-1.5 px-2 py-1 bg-green-50 rounded-lg border border-green-200 max-w-[140px] sm:max-w-none">
+              <Wallet className="h-4 w-4 text-green-600 shrink-0" />
+              <span className="text-xs sm:text-sm font-semibold text-green-700 truncate">{wallet.balance}</span>
             </div>
           )}
           <ThemeToggle />

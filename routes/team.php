@@ -19,6 +19,7 @@ use Inertia\Inertia;
 // Subscription Management Routes (no subscription check needed, blocked for admin)
 Route::middleware('role:team|member')->prefix('subscriptions')->name('subscriptions.')->group(function () {
     Route::get('/', [\App\Http\Controllers\Team\SubscriptionController::class, 'index'])->name('index');
+    Route::get('/history', [\App\Http\Controllers\Team\SubscriptionController::class, 'history'])->name('history');
     Route::post('/subscribe', [\App\Http\Controllers\Team\SubscriptionController::class, 'subscribe'])->name('subscribe');
     Route::patch('/{subscription}/cancel', [\App\Http\Controllers\Team\SubscriptionController::class, 'cancel'])->name('cancel');
     Route::get('/logs', [\App\Http\Controllers\Team\SubscriptionController::class, 'logs'])->name('logs');
@@ -47,7 +48,7 @@ Route::middleware('check.subscription')->group(function () {
     Route::delete('/{team}', [TeamController::class, 'destroy'])->name('destroy');
 
     // Team Info Routes
-    Route::get('/{team}/info', [TeamInfoController::class, 'show'])->name('info');
+    Route::get('/{team}/info', [TeamInfoController::class, 'show'])->name('info')->middleware('signed');
     Route::patch('/{team}/info/basic', [TeamInfoController::class, 'updateBasicInfo'])->name('updateBasicInfo');
     Route::patch('/{team}/info/location', [TeamInfoController::class, 'updateLocation'])->name('updateLocation');
     Route::patch('/{team}/info/plan', [TeamInfoController::class, 'updatePlan'])->name('updatePlan');

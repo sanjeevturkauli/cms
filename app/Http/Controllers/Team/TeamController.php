@@ -35,6 +35,14 @@ class TeamController extends Controller
                     // Count total teams owned by this user
                     $totalTeamsOwned = Team::where('user_id', $user->id)->count();
 
+                    // Generate signed URL for team info with encrypted ID (expires in 60 minutes)
+                    $encryptedId = encrypt($team->id);
+                    $signedUrl = \Illuminate\Support\Facades\URL::temporarySignedRoute(
+                        'team.info',
+                        now()->addMinutes(60),
+                        ['team' => $encryptedId]
+                    );
+
                     return [
                         'id' => $team->id,
                         'name' => $team->name,
@@ -45,6 +53,7 @@ class TeamController extends Controller
                         'created_at' => $team->created_at->format('M d, Y'),
                         'can_be_deleted' => $totalTeamsOwned > 1 && $team->members_count == 0,
                         'total_teams_owned' => $totalTeamsOwned,
+                        'signed_url' => $signedUrl,
                     ];
                 });
         } else {
@@ -53,6 +62,14 @@ class TeamController extends Controller
                 ->with('team')
                 ->get()
                 ->map(function ($member) {
+                    // Generate signed URL for team info with encrypted ID (expires in 60 minutes)
+                    $encryptedId = encrypt($member->team->id);
+                    $signedUrl = \Illuminate\Support\Facades\URL::temporarySignedRoute(
+                        'team.info',
+                        now()->addMinutes(60),
+                        ['team' => $encryptedId]
+                    );
+
                     return [
                         'id' => $member->team->id,
                         'name' => $member->team->name,
@@ -62,6 +79,7 @@ class TeamController extends Controller
                         'joined_at' => $member->created_at->format('M d, Y'),
                         'can_be_deleted' => false,  // Members can't delete teams
                         'total_teams_owned' => 0,
+                        'signed_url' => $signedUrl,
                     ];
                 });
         }

@@ -36,6 +36,7 @@ interface Team {
     is_active: boolean;
     created_at: string;
     updated_at: string;
+    encrypted_id?: string;
 }
 
 interface TeamInfo {
@@ -193,7 +194,7 @@ export default function TeamInfoPage({ team, teamInfo, permissions }: Props) {
                                 <Button
                                     variant="ghost"
                                     size="sm"
-                                    onClick={() => router.get('/teams')}
+                                    onClick={() => router.get('/team')}
                                     className="cursor-pointer"
                                 >
                                     <ArrowLeft className="h-4 w-4" />

@@ -11,8 +11,16 @@ use Inertia\Inertia;
 
 class TeamInfoController extends Controller
 {
-    public function show(Team $team)
+    public function show($encryptedTeamId)
     {
+        try {
+            // Decrypt the team ID
+            $teamId = decrypt($encryptedTeamId);
+            $team = Team::findOrFail($teamId);
+        } catch (\Exception $e) {
+            abort(403, 'Invalid team identifier.');
+        }
+
         $user = Auth::user();
 
         // Check if user owns this team or is a member
@@ -20,7 +28,7 @@ class TeamInfoController extends Controller
         $isMember = $team->members()->where('user_id', $user->id)->exists();
 
         if (!$isOwner && !$isMember) {
-            return redirect()->route('teams.index')->with('error', 'You do not have access to this team.');
+            abort(403, 'You do not have access to this team.');
         }
 
         // Get or create team info
@@ -34,6 +42,7 @@ class TeamInfoController extends Controller
                 'status' => $team->status,
                 'is_active' => $team->is_active,
                 'created_at' => $team->created_at->format('M d, Y'),
+                'encrypted_id' => $encryptedTeamId, // Pass encrypted ID to frontend
             ],
             'teamInfo' => [
                 'id' => $teamInfo->id ?? null,
@@ -67,8 +76,15 @@ class TeamInfoController extends Controller
             ],
         ]);
     }
-    public function updateBasicInfo(Request $request, Team $team)
+    public function updateBasicInfo(Request $request, $encryptedTeamId)
     {
+        try {
+            $teamId = decrypt($encryptedTeamId);
+            $team = Team::findOrFail($teamId);
+        } catch (\Exception $e) {
+            abort(403, 'Invalid team identifier.');
+        }
+
         $user = Auth::user();
         $isOwner = $team->user_id === $user->id;
 
@@ -88,8 +104,15 @@ class TeamInfoController extends Controller
         return redirect()->back()->with('success', 'Basic information updated successfully.');
     }
 
-    public function updateLocation(Request $request, Team $team)
+    public function updateLocation(Request $request, $encryptedTeamId)
     {
+        try {
+            $teamId = decrypt($encryptedTeamId);
+            $team = Team::findOrFail($teamId);
+        } catch (\Exception $e) {
+            abort(403, 'Invalid team identifier.');
+        }
+
         $user = Auth::user();
         $isOwner = $team->user_id === $user->id;
 
@@ -119,8 +142,15 @@ class TeamInfoController extends Controller
         return redirect()->back()->with('success', 'Location information updated successfully.');
     }
 
-    public function updatePlan(Request $request, Team $team)
+    public function updatePlan(Request $request, $encryptedTeamId)
     {
+        try {
+            $teamId = decrypt($encryptedTeamId);
+            $team = Team::findOrFail($teamId);
+        } catch (\Exception $e) {
+            abort(403, 'Invalid team identifier.');
+        }
+
         $user = Auth::user();
         $isOwner = $team->user_id === $user->id;
 
@@ -148,8 +178,15 @@ class TeamInfoController extends Controller
         return redirect()->back()->with('success', 'Plan information updated successfully.');
     }
 
-    public function updateSettings(Request $request, Team $team)
+    public function updateSettings(Request $request, $encryptedTeamId)
     {
+        try {
+            $teamId = decrypt($encryptedTeamId);
+            $team = Team::findOrFail($teamId);
+        } catch (\Exception $e) {
+            abort(403, 'Invalid team identifier.');
+        }
+
         $user = Auth::user();
         $isOwner = $team->user_id === $user->id;
 

@@ -1,7 +1,6 @@
 <?php
 
 use App\Http\Controllers\Team\TeamController;
-use App\Http\Controllers\Team\TeamInfoController;
 use App\Http\Controllers\RedirectHandler;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;

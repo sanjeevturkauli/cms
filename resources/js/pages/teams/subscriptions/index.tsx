@@ -140,7 +140,7 @@ interface StripeCardElement {
 export default function TeamSubscriptionsIndex({ teams, packages, wallet, paymentGateways, cancellationFee }: Props) {
     const { props } = usePage();
     const auth = props.auth as any; // Get authenticated user data
-    
+
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [showLogsDialog, setShowLogsDialog] = useState(false);
     const [logs, setLogs] = useState<SubscriptionLog[]>([]);
@@ -165,7 +165,7 @@ export default function TeamSubscriptionsIndex({ teams, packages, wallet, paymen
     const [razorpay, setRazorpay] = useState<any>(null);
     const [razorpayError, setRazorpayError] = useState<string | null>(null);
     const cardElementRef = useRef<HTMLDivElement>(null);
-    
+
     // Set default gateway to first enabled one
     const getDefaultGateway = () => {
         if (paymentGateways.razorpay.enabled) return 'razorpay';
@@ -173,7 +173,7 @@ export default function TeamSubscriptionsIndex({ teams, packages, wallet, paymen
         if (paymentGateways.paypal.enabled) return 'paypal';
         return 'razorpay'; // fallback
     };
-    
+
     const [selectedGateway, setSelectedGateway] = useState<string>(getDefaultGateway());
 
     // UPI ID validation
@@ -200,7 +200,7 @@ export default function TeamSubscriptionsIndex({ teams, packages, wallet, paymen
 
     const handlePaymentProceed = () => {
         const teamToSubscribe = teams.find(t => t.subscription) || teams[0];
-        
+
         if (!teamToSubscribe || !selectedPackageId) {
             return;
         }
@@ -234,14 +234,14 @@ export default function TeamSubscriptionsIndex({ teams, packages, wallet, paymen
     const loadStripe = () => {
         // Get public key from backend settings (passed via paymentGateways prop)
         const publicKey = paymentGateways.stripe.public_key || '';
-        
+
         console.log('Loading Stripe with public key:', publicKey ? 'Key present' : 'Key missing');
-        
+
         if (!publicKey) {
             toast.error('Stripe public key not configured');
             return;
         }
-        
+
         if (window.Stripe) {
             console.log('Stripe already loaded, initializing...');
             const stripeInstance = window.Stripe(publicKey);
@@ -279,14 +279,14 @@ export default function TeamSubscriptionsIndex({ teams, packages, wallet, paymen
     const loadRazorpay = () => {
         // Get key from backend settings (passed via paymentGateways prop)
         const keyId = paymentGateways.razorpay.key_id || '';
-        
+
         console.log('Loading Razorpay with key:', keyId ? 'Key present' : 'Key missing');
-        
+
         if (!keyId) {
             toast.error('Razorpay key not configured');
             return;
         }
-        
+
         if (window.Razorpay) {
             console.log('Razorpay already loaded');
             setRazorpay(true); // Just set to true since we use window.Razorpay directly
@@ -319,14 +319,14 @@ export default function TeamSubscriptionsIndex({ teams, packages, wallet, paymen
         // Wait for: dialog open + stripe loaded + elements created + card method + ref ready + not already mounted
         if (showStripeCheckout && stripe && stripeElements && stripePaymentMethod === 'card' && cardElementRef.current && !cardElement) {
             console.log('Mounting Stripe Card Element...');
-            
+
             // Small delay to ensure DOM is ready
             const timer = setTimeout(() => {
                 if (!cardElementRef.current) {
                     console.error('Card element ref not available');
                     return;
                 }
-                
+
                 try {
                     const card = stripeElements.create('card', {
                         style: {
@@ -344,7 +344,7 @@ export default function TeamSubscriptionsIndex({ teams, packages, wallet, paymen
                         },
                         hidePostalCode: true,
                     });
-                    
+
                     card.mount(cardElementRef.current);
                     setCardElement(card);
 
@@ -356,7 +356,7 @@ export default function TeamSubscriptionsIndex({ teams, packages, wallet, paymen
                             setStripeError(null);
                         }
                     });
-                    
+
                     console.log('Stripe Card Element mounted successfully');
                 } catch (error) {
                     console.error('Error mounting card element:', error);
@@ -437,7 +437,7 @@ export default function TeamSubscriptionsIndex({ teams, packages, wallet, paymen
 
             const data = await response.json();
             console.log('Stripe Payment Data:', data);
-            
+
             if (!data.success) {
                 toast.dismiss(toastId);
                 toast.error(data.error || 'Failed to create payment');
@@ -505,7 +505,7 @@ export default function TeamSubscriptionsIndex({ teams, packages, wallet, paymen
                                 }
                                 setCardElement(null);
                             }
-                            
+
                             setShowStripeCheckout(false);
                             setIsProcessingPayment(false);
                             setUpiId('');
@@ -572,7 +572,7 @@ export default function TeamSubscriptionsIndex({ teams, packages, wallet, paymen
 
             const data = await response.json();
             console.log('Razorpay Payment Data:', data);
-            
+
             if (!data.success) {
                 toast.dismiss(toastId);
                 toast.error(data.error || 'Failed to create payment');
@@ -619,7 +619,7 @@ export default function TeamSubscriptionsIndex({ teams, packages, wallet, paymen
                     });
                 },
                 modal: {
-                    ondismiss: function() {
+                    ondismiss: function () {
                         setIsProcessingPayment(false);
                         toast.error('Payment cancelled');
                     }
@@ -680,7 +680,7 @@ export default function TeamSubscriptionsIndex({ teams, packages, wallet, paymen
     const handleViewLogs = () => {
         setIsLoadingLogs(true);
         setShowLogsDialog(true);
-        
+
         // Fetch logs via AJAX
         fetch('/team/subscriptions/logs', {
             headers: {
@@ -688,15 +688,15 @@ export default function TeamSubscriptionsIndex({ teams, packages, wallet, paymen
                 'X-Requested-With': 'XMLHttpRequest',
             }
         })
-        .then(response => response.json())
-        .then(data => {
-            setLogs(data.logs.data || []);
-            setIsLoadingLogs(false);
-        })
-        .catch(error => {
-            console.error('Error fetching logs:', error);
-            setIsLoadingLogs(false);
-        });
+            .then(response => response.json())
+            .then(data => {
+                setLogs(data.logs.data || []);
+                setIsLoadingLogs(false);
+            })
+            .catch(error => {
+                console.error('Error fetching logs:', error);
+                setIsLoadingLogs(false);
+            });
     };
 
     const getActionBadge = (action: string) => {
@@ -769,19 +769,19 @@ export default function TeamSubscriptionsIndex({ teams, packages, wallet, paymen
                                     </CardHeader>
                                     <CardContent>
                                         {teams.filter(team => team.subscription).map((team) => (
-                                            <div key={team.id} className="p-4 bg-muted rounded-lg">
-                                                <div className="flex items-center justify-between mb-4">
+                                            <div key={team.id} className="p-3 sm:p-4 bg-muted rounded-lg">
+                                                <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
                                                     <h3 className="font-semibold text-lg">{team.name}</h3>
                                                     {team.subscription && getStatusBadge(team.subscription)}
                                                 </div>
-                                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 text-sm">
                                                     <div>
                                                         <span className="font-medium">Package:</span>
-                                                        <div className="text-lg font-semibold">{team.subscription!.package_name}</div>
+                                                        <div className="text-base sm:text-lg font-semibold">{team.subscription!.package_name}</div>
                                                     </div>
                                                     <div>
                                                         <span className="font-medium">Amount Paid:</span>
-                                                        <div className="text-lg font-semibold">{team.subscription!.amount_paid}</div>
+                                                        <div className="text-base sm:text-lg font-semibold">{team.subscription!.amount_paid}</div>
                                                     </div>
                                                     <div>
                                                         <span className="font-medium">End Date:</span>
@@ -789,11 +789,10 @@ export default function TeamSubscriptionsIndex({ teams, packages, wallet, paymen
                                                     </div>
                                                     <div>
                                                         <span className="font-medium">Days Remaining:</span>
-                                                        <div className={`font-semibold ${
-                                                            team.subscription!.days_remaining <= 30 
-                                                                ? 'text-yellow-600' 
-                                                                : 'text-green-600'
-                                                        }`}>
+                                                        <div className={`font-semibold ${team.subscription!.days_remaining <= 30
+                                                            ? 'text-yellow-600'
+                                                            : 'text-green-600'
+                                                            }`}>
                                                             {team.subscription!.days_remaining} days
                                                         </div>
                                                     </div>
@@ -817,8 +816,8 @@ export default function TeamSubscriptionsIndex({ teams, packages, wallet, paymen
                             )}
 
                             {/* Available Packages Section */}
-                            <div className="space-y-6">
-                                <div className="flex items-center justify-between">
+                            <div className="space-y-6 ">
+                                <div className="grid gap-3 sm:flex items-center justify-between">
                                     <div>
                                         <h2 className="text-2xl font-bold">Choose Your Plan</h2>
                                         <p className="text-muted-foreground">
@@ -829,11 +828,11 @@ export default function TeamSubscriptionsIndex({ teams, packages, wallet, paymen
                                         <Button
                                             variant="outline"
                                             size="sm"
-                                            onClick={handleViewLogs}
+                                            onClick={() => router.visit('/team/subscriptions/history')}
                                             className="flex items-center gap-2 cursor-pointer"
                                         >
                                             <History className="h-4 w-4" />
-                                            View Logs
+                                            View History
                                         </Button>
                                         <Button
                                             variant="outline"
@@ -854,11 +853,10 @@ export default function TeamSubscriptionsIndex({ teams, packages, wallet, paymen
                                     {packages.map((pkg) => {
                                         const currentTeam = teams.find(team => team.subscription);
                                         const isCurrentPackage = currentTeam?.subscription?.package_name === pkg.name;
-                                        
+
                                         return (
-                                            <Card key={pkg.id} className={`relative transition-all hover:shadow-lg ${
-                                                isCurrentPackage ? 'ring-2 ring-blue-500 bg-blue-50' : ''
-                                            }`}>
+                                            <Card key={pkg.id} className={`relative transition-all hover:shadow-lg ${isCurrentPackage ? 'ring-2 ring-blue-500 bg-blue-50' : ''
+                                                }`}>
                                                 {/* Current Package Badge */}
                                                 {isCurrentPackage && (
                                                     <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
@@ -878,7 +876,7 @@ export default function TeamSubscriptionsIndex({ teams, packages, wallet, paymen
                                                         {pkg.formatted_person} • {pkg.duration_range}
                                                     </CardDescription>
                                                 </CardHeader>
-                                                
+
                                                 <CardContent className="flex flex-col h-full">
                                                     {/* Features List */}
                                                     <div className="space-y-3 mb-6 flex-grow">
@@ -889,7 +887,7 @@ export default function TeamSubscriptionsIndex({ teams, packages, wallet, paymen
                                                             </div>
                                                         ))}
                                                     </div>
-                                                    
+
                                                     {/* Action Button - Always at bottom */}
                                                     <div className="mt-auto">
                                                         {!isCurrentPackage ? (
@@ -898,15 +896,15 @@ export default function TeamSubscriptionsIndex({ teams, packages, wallet, paymen
                                                                 className="w-full cursor-pointer"
                                                                 size="lg"
                                                             >
-                                                                {currentTeam?.subscription 
+                                                                {currentTeam?.subscription
                                                                     ? `Switch to ${pkg.name}`
                                                                     : `Get ${pkg.name}`
                                                                 }
                                                             </Button>
                                                         ) : (
-                                                            <Button 
-                                                                disabled 
-                                                                className="w-full" 
+                                                            <Button
+                                                                disabled
+                                                                className="w-full"
                                                                 size="lg"
                                                             >
                                                                 Your Current Plan
@@ -926,31 +924,35 @@ export default function TeamSubscriptionsIndex({ teams, packages, wallet, paymen
 
             {/* Subscription Logs Dialog */}
             <Dialog open={showLogsDialog} onOpenChange={setShowLogsDialog}>
-                <DialogContent className="max-w-6xl max-h-[85vh] overflow-hidden">
-                    <DialogHeader>
-                        <DialogTitle className="flex items-center gap-2">
-                            <History className="h-5 w-5" />
-                            Subscription History
-                        </DialogTitle>
-                        <DialogDescription>
-                            Complete history of your subscription activities
-                        </DialogDescription>
-                    </DialogHeader>
-                    
-                    <div className="overflow-y-auto max-h-[70vh]">
+                <DialogContent className="w-[calc(100vw-2rem)] max-w-6xl max-h-[85vh] p-0 gap-0 flex flex-col">
+                    <div className="px-6 pt-6 pb-4 border-b shrink-0">
+                        <DialogHeader>
+                            <DialogTitle className="flex items-center gap-2">
+                                <History className="h-5 w-5" />
+                                Subscription History
+                            </DialogTitle>
+                            <DialogDescription>
+                                Complete history of your subscription activities
+                            </DialogDescription>
+                        </DialogHeader>
+                    </div>
+
+                    <div className="overflow-auto flex-1">
                         {isLoadingLogs ? (
-                            <div className="flex items-center justify-center py-8">
+                            <div className="flex items-center justify-center py-8 px-6">
                                 <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground" />
                                 <span className="ml-2 text-muted-foreground">Loading logs...</span>
                             </div>
                         ) : logs.length === 0 ? (
-                            <div className="text-center py-8">
+                            <div className="text-center py-8 px-6">
                                 <History className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                                 <p className="text-muted-foreground">No subscription history found</p>
                             </div>
                         ) : (
+                            <div className="px-6 py-4">
                             <TooltipProvider>
-                                <Table>
+                                <div className="overflow-x-auto -mx-6 px-6">
+                                <Table className="min-w-[600px]">
                                     <TableHeader>
                                         <TableRow>
                                             <TableHead>Message</TableHead>
@@ -1029,7 +1031,9 @@ export default function TeamSubscriptionsIndex({ teams, packages, wallet, paymen
                                         ))}
                                     </TableBody>
                                 </Table>
+                                </div>
                             </TooltipProvider>
+                            </div>
                         )}
                     </div>
                 </DialogContent>
@@ -1037,7 +1041,7 @@ export default function TeamSubscriptionsIndex({ teams, packages, wallet, paymen
 
             {/* Cancellation Confirmation Dialog */}
             <Dialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
-                <DialogContent className="max-w-md">
+                <DialogContent className="w-[calc(100vw-2rem)] max-w-md">
                     <DialogHeader>
                         <DialogTitle className="text-xl font-semibold text-red-600">
                             Cancel Subscription?
@@ -1046,7 +1050,7 @@ export default function TeamSubscriptionsIndex({ teams, packages, wallet, paymen
                             Are you sure you want to cancel the subscription for team "{cancelSubscriptionData?.teamName}"?
                         </DialogDescription>
                     </DialogHeader>
-                    
+
                     <div className="py-4">
                         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
                             <div className="flex items-start gap-3">
@@ -1061,7 +1065,7 @@ export default function TeamSubscriptionsIndex({ teams, packages, wallet, paymen
                                     </h3>
                                     <div className="mt-2 text-sm text-yellow-700">
                                         <p>
-                                        If you cancel this subscription, a cancellation fee of <span className="font-semibold">₹{cancellationFee}</span> will be charged from your wallet and transferred to admin.
+                                            If you cancel this subscription, a cancellation fee of <span className="font-semibold">₹{cancellationFee}</span> will be charged from your wallet and transferred to admin.
                                         </p>
                                         <p className="mt-2">
                                             Current wallet balance: <span className="font-semibold">{wallet.balance}</span>
@@ -1070,26 +1074,26 @@ export default function TeamSubscriptionsIndex({ teams, packages, wallet, paymen
                                 </div>
                             </div>
                         </div>
-                        
+
                         <p className="text-sm text-muted-foreground mt-4">
                             Once cancelled, this action cannot be undone. You will need to create a new subscription to continue using premium features.
                         </p>
                     </div>
 
-                    <div className="flex justify-end gap-3">
-                        <Button 
-                            variant="outline" 
+                    <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 sm:gap-3">
+                        <Button
+                            variant="outline"
                             onClick={() => setShowCancelDialog(false)}
                             disabled={isCancelling}
-                            className='cursor-pointer'
+                            className='cursor-pointer w-full sm:w-auto'
                         >
                             Cancel
                         </Button>
-                        <Button 
-                            variant="destructive" 
+                        <Button
+                            variant="destructive"
                             onClick={confirmCancelSubscription}
                             disabled={wallet.raw_balance < cancellationFee || isCancelling}
-                            className="cursor-pointer min-w-[140px]"
+                            className="cursor-pointer w-full sm:w-auto min-w-[140px]"
                         >
                             {isCancelling ? (
                                 <div className="flex items-center gap-2">
@@ -1108,22 +1112,21 @@ export default function TeamSubscriptionsIndex({ teams, packages, wallet, paymen
 
             {/* Payment Gateway Selection Dialog */}
             <Dialog open={showPaymentDialog} onOpenChange={setShowPaymentDialog}>
-                <DialogContent className="max-w-md">
+                <DialogContent className="w-[calc(100vw-2rem)] max-w-md">
                     <DialogHeader>
                         <DialogTitle>Select Payment Method</DialogTitle>
                         <DialogDescription>
                             Choose your preferred payment gateway to complete the subscription
                         </DialogDescription>
                     </DialogHeader>
-                    
+
                     <div className="space-y-4 py-4">
                         <div className="space-y-3">
                             {/* Razorpay */}
-                            <label className={`flex items-center gap-3 p-4 border rounded-lg ${
-                                paymentGateways.razorpay.enabled 
-                                    ? 'cursor-pointer hover:bg-gray-50' 
-                                    : 'opacity-50 cursor-not-allowed'
-                            }`}>
+                            <label className={`flex items-center gap-3 p-4 border rounded-lg ${paymentGateways.razorpay.enabled
+                                ? 'cursor-pointer hover:bg-gray-50'
+                                : 'opacity-50 cursor-not-allowed'
+                                }`}>
                                 <input
                                     type="radio"
                                     name="gateway"
@@ -1136,19 +1139,18 @@ export default function TeamSubscriptionsIndex({ teams, packages, wallet, paymen
                                 <div className="flex-1">
                                     <div className="font-semibold">{paymentGateways.razorpay.name}</div>
                                     <div className="text-sm text-muted-foreground">
-                                        {paymentGateways.razorpay.enabled 
-                                            ? paymentGateways.razorpay.description 
+                                        {paymentGateways.razorpay.enabled
+                                            ? paymentGateways.razorpay.description
                                             : 'Coming Soon'}
                                     </div>
                                 </div>
                             </label>
 
                             {/* Stripe */}
-                            <label className={`flex items-center gap-3 p-4 border rounded-lg ${
-                                paymentGateways.stripe.enabled 
-                                    ? 'cursor-pointer hover:bg-gray-50' 
-                                    : 'opacity-50 cursor-not-allowed'
-                            }`}>
+                            <label className={`flex items-center gap-3 p-4 border rounded-lg ${paymentGateways.stripe.enabled
+                                ? 'cursor-pointer hover:bg-gray-50'
+                                : 'opacity-50 cursor-not-allowed'
+                                }`}>
                                 <input
                                     type="radio"
                                     name="gateway"
@@ -1161,19 +1163,18 @@ export default function TeamSubscriptionsIndex({ teams, packages, wallet, paymen
                                 <div className="flex-1">
                                     <div className="font-semibold">{paymentGateways.stripe.name}</div>
                                     <div className="text-sm text-muted-foreground">
-                                        {paymentGateways.stripe.enabled 
-                                            ? paymentGateways.stripe.description 
+                                        {paymentGateways.stripe.enabled
+                                            ? paymentGateways.stripe.description
                                             : 'Coming Soon'}
                                     </div>
                                 </div>
                             </label>
 
                             {/* PayPal */}
-                            <label className={`flex items-center gap-3 p-4 border rounded-lg ${
-                                paymentGateways.paypal.enabled 
-                                    ? 'cursor-pointer hover:bg-gray-50' 
-                                    : 'opacity-50 cursor-not-allowed'
-                            }`}>
+                            <label className={`flex items-center gap-3 p-4 border rounded-lg ${paymentGateways.paypal.enabled
+                                ? 'cursor-pointer hover:bg-gray-50'
+                                : 'opacity-50 cursor-not-allowed'
+                                }`}>
                                 <input
                                     type="radio"
                                     name="gateway"
@@ -1186,8 +1187,8 @@ export default function TeamSubscriptionsIndex({ teams, packages, wallet, paymen
                                 <div className="flex-1">
                                     <div className="font-semibold">{paymentGateways.paypal.name}</div>
                                     <div className="text-sm text-muted-foreground">
-                                        {paymentGateways.paypal.enabled 
-                                            ? paymentGateways.paypal.description 
+                                        {paymentGateways.paypal.enabled
+                                            ? paymentGateways.paypal.description
                                             : 'Coming Soon'}
                                     </div>
                                 </div>
@@ -1196,23 +1197,24 @@ export default function TeamSubscriptionsIndex({ teams, packages, wallet, paymen
 
                         <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                             <p className="text-sm text-blue-800">
-                                {selectedGateway === 'stripe' 
+                                {selectedGateway === 'stripe'
                                     ? 'Stripe checkout will open in a dialog for secure payment processing.'
                                     : 'You will be redirected to the payment gateway to complete your transaction securely.'}
                             </p>
                         </div>
                     </div>
 
-                    <div className="flex justify-end gap-3">
-                        <Button 
-                            variant="outline" 
+                    <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 sm:gap-3">
+                        <Button
+                            variant="outline"
                             onClick={() => setShowPaymentDialog(false)}
+                            className="w-full sm:w-auto"
                         >
                             Cancel
                         </Button>
-                        <Button 
+                        <Button
                             onClick={handlePaymentProceed}
-                            className="cursor-pointer"
+                            className="cursor-pointer w-full sm:w-auto"
                         >
                             Proceed to Payment
                         </Button>
@@ -1242,7 +1244,7 @@ export default function TeamSubscriptionsIndex({ teams, packages, wallet, paymen
                 }
                 setShowStripeCheckout(open);
             }}>
-                <DialogContent className="max-w-md max-h-[90vh] overflow-hidden flex flex-col">
+                <DialogContent className="w-[calc(100vw-2rem)] max-w-md max-h-[90vh] overflow-hidden flex flex-col">
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2">
                             <CreditCard className="h-5 w-5" />
@@ -1252,16 +1254,15 @@ export default function TeamSubscriptionsIndex({ teams, packages, wallet, paymen
                             Complete your payment securely with Stripe
                         </DialogDescription>
                     </DialogHeader>
-                    
+
                     <div className="space-y-4 overflow-y-auto flex-1 pr-2">
                         {/* Payment Method Selection */}
                         <div className="space-y-3">
                             <div className="text-sm font-medium">Select Payment Method</div>
                             <div className="space-y-2">
                                 {/* UPI Option - Now First */}
-                                <label className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors ${
-                                    stripePaymentMethod === 'upi' ? 'border-blue-500 bg-blue-50' : ''
-                                }`}>
+                                <label className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors ${stripePaymentMethod === 'upi' ? 'border-blue-500 bg-blue-50' : ''
+                                    }`}>
                                     <input
                                         type="radio"
                                         name="stripe-method"
@@ -1280,14 +1281,13 @@ export default function TeamSubscriptionsIndex({ teams, packages, wallet, paymen
                                         </div>
                                     </div>
                                     <svg className="h-5 w-5 text-muted-foreground" viewBox="0 0 24 24" fill="currentColor">
-                                        <path d="M20 8h-3V4H3c-1.1 0-2 .9-2 2v11h2c0 1.66 1.34 3 3 3s3-1.34 3-3h6c0 1.66 1.34 3 3 3s3-1.34 3-3h2v-5l-3-4zM6 18.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm13.5-9l1.96 2.5H17V9.5h2.5zm-1.5 9c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/>
+                                        <path d="M20 8h-3V4H3c-1.1 0-2 .9-2 2v11h2c0 1.66 1.34 3 3 3s3-1.34 3-3h6c0 1.66 1.34 3 3 3s3-1.34 3-3h2v-5l-3-4zM6 18.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm13.5-9l1.96 2.5H17V9.5h2.5zm-1.5 9c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z" />
                                     </svg>
                                 </label>
 
                                 {/* Card Option - Now Second */}
-                                <label className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors ${
-                                    stripePaymentMethod === 'card' ? 'border-blue-500 bg-blue-50' : ''
-                                }`}>
+                                <label className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors ${stripePaymentMethod === 'card' ? 'border-blue-500 bg-blue-50' : ''
+                                    }`}>
                                     <input
                                         type="radio"
                                         name="stripe-method"
@@ -1319,8 +1319,8 @@ export default function TeamSubscriptionsIndex({ teams, packages, wallet, paymen
                                 <div className="space-y-3">
                                     <div>
                                         <label className="text-xs text-muted-foreground mb-1 block">UPI ID</label>
-                                        <input 
-                                            type="text" 
+                                        <input
+                                            type="text"
                                             placeholder="yourname@paytm"
                                             value={upiId}
                                             onChange={handleUpiIdChange}
@@ -1370,7 +1370,7 @@ export default function TeamSubscriptionsIndex({ teams, packages, wallet, paymen
                                                 <span className="text-sm text-muted-foreground">Loading payment form...</span>
                                             </div>
                                         ) : (
-                                            <div 
+                                            <div
                                                 ref={cardElementRef}
                                                 className="w-full px-3 py-3 border rounded bg-white"
                                                 style={{ minHeight: '40px' }}
@@ -1391,15 +1391,15 @@ export default function TeamSubscriptionsIndex({ teams, packages, wallet, paymen
                         {/* Live Mode Notice */}
                         <div className="bg-green-50 border border-green-200 rounded-lg p-3">
                             <p className="text-xs text-green-800">
-                                <strong>🔒 Secure Payment:</strong> Your payment will be processed securely through Stripe. 
+                                <strong>🔒 Secure Payment:</strong> Your payment will be processed securely through Stripe.
                                 Use test card <strong>4242 4242 4242 4242</strong> for testing.
                             </p>
                         </div>
                     </div>
 
-                    <div className="flex justify-end gap-3 pt-4 border-t">
-                        <Button 
-                            variant="outline" 
+                    <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 sm:gap-3 pt-4 border-t">
+                        <Button
+                            variant="outline"
                             onClick={() => {
                                 // Cleanup card element before going back
                                 if (cardElement) {
@@ -1416,13 +1416,14 @@ export default function TeamSubscriptionsIndex({ teams, packages, wallet, paymen
                                 setUpiId('');
                             }}
                             disabled={isProcessingPayment}
+                            className="w-full sm:w-auto"
                         >
                             Back
                         </Button>
-                        <Button 
+                        <Button
                             onClick={handleStripePayment}
                             disabled={isProcessingPayment || !stripe}
-                            className="cursor-pointer min-w-[120px]"
+                            className="cursor-pointer w-full sm:w-auto min-w-[120px]"
                         >
                             {isProcessingPayment ? (
                                 <div className="flex items-center gap-2">
@@ -1446,7 +1447,7 @@ export default function TeamSubscriptionsIndex({ teams, packages, wallet, paymen
                 }
                 setShowRazorpayCheckout(open);
             }}>
-                <DialogContent className="max-w-md max-h-[90vh] overflow-hidden flex flex-col">
+                <DialogContent className="w-[calc(100vw-2rem)] max-w-md max-h-[90vh] overflow-hidden flex flex-col">
                     <DialogHeader>
                         <DialogTitle>Razorpay Payment</DialogTitle>
                         <DialogDescription>
@@ -1516,27 +1517,28 @@ export default function TeamSubscriptionsIndex({ teams, packages, wallet, paymen
                         {/* Live Mode Notice */}
                         <div className="bg-green-50 border border-green-200 rounded-lg p-3">
                             <p className="text-xs text-green-800">
-                                <strong>🔒 Secure Payment:</strong> Your payment will be processed securely through Razorpay. 
+                                <strong>🔒 Secure Payment:</strong> Your payment will be processed securely through Razorpay.
                                 Multiple payment options available including UPI, cards, and wallets.
                             </p>
                         </div>
                     </div>
 
-                    <div className="flex justify-end gap-3 pt-4 border-t">
-                        <Button 
-                            variant="outline" 
+                    <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 sm:gap-3 pt-4 border-t">
+                        <Button
+                            variant="outline"
                             onClick={() => {
                                 setShowRazorpayCheckout(false);
                                 setShowPaymentDialog(true);
                             }}
                             disabled={isProcessingPayment}
+                            className="w-full sm:w-auto"
                         >
                             Back
                         </Button>
-                        <Button 
+                        <Button
                             onClick={handleRazorpayPayment}
                             disabled={isProcessingPayment || !razorpay || !window.Razorpay}
-                            className="cursor-pointer min-w-[120px]"
+                            className="cursor-pointer w-full sm:w-auto min-w-[120px]"
                         >
                             {isProcessingPayment ? (
                                 <div className="flex items-center gap-2">

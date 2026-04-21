@@ -333,4 +333,64 @@ class SubscriptionController extends Controller
             ],
         ]);
     }
+
+    public function history(Request $request)
+    {
+        $user = Auth::user();
+        
+        $query = SubscriptionLog::where('user_id', $user->id)
+            ->with(['team', 'subscription.package'])
+            ->orderBy('created_at', 'desc');
+
+        // Apply filters
+        if ($request->filled('action') && $request->action !== 'all') {
+            $query->where('action', $request->action);
+        }
+
+        if ($request->filled('package') && $request->package !== 'all') {
+            $query->where(function($q) use ($request) {
+                $q->where('from_package', $request->package)
+                  ->orWhere('to_package', $request->package);
+            });
+        }
+
+        if ($request->filled('search')) {
+            $query->where('description', 'like', '%' . $request->search . '%');
+        }
+
+        $logs = $query->paginate(20)->through(function ($log) {
+            return [
+                'id' => $log->id,
+                'action' => $log->action,
+                'action_badge' => $log->action_badge,
+                'team_name' => $log->team->name,
+                'from_package' => $log->from_package,
+                'to_package' => $log->to_package,
+                'amount_charged' => $log->formatted_amount_charged,
+                'description' => $log->description,
+                'created_at' => $log->created_at->format('M d, Y H:i'),
+                'days_used' => $log->days_used,
+                'days_remaining' => $log->days_remaining,
+            ];
+        });
+
+        // Get unique packages for filter dropdown
+        $packages = SubscriptionLog::where('user_id', $user->id)
+            ->select('to_package')
+            ->distinct()
+            ->pluck('to_package')
+            ->filter()
+            ->values()
+            ->toArray();
+
+        return Inertia::render('teams/subscriptions/history', [
+            'logs' => $logs,
+            'filters' => [
+                'action' => $request->action,
+                'package' => $request->package,
+                'search' => $request->search,
+            ],
+            'packages' => $packages,
+        ]);
+    }
 }

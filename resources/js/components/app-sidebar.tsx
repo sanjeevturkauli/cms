@@ -22,6 +22,7 @@ import { dashboard } from '@/routes/index';
 import { User, type SharedData } from '@/types';
 import { index as teamsIndex } from '@/routes/team';
 import { members as teamsMembersIndex } from '@/routes/team';
+import { history as subscriptionsHistory } from '@/routes/team/subscriptions/index';
 
 
 
@@ -66,7 +67,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                         routeName === 'team.members' ||
                         routeName === 'teams.index' ||
                         routeName === 'team.subscriptions.index' ||
-                        routeName === 'team.index',
+                        routeName === 'team.index' ||
+                        routeName === 'team.subscriptions.history',
                     items: [
                         {
                             title: 'Teams',
@@ -79,10 +81,15 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                             isActive: routeName === 'teams.members' || routeName === 'team.members',
                         },
                         {
-                            title: 'Subscriptions',
-                            url: '/team/subscriptions',
-                            isActive: routeName === 'team.subscriptions.index',
+                            title: 'Subscriptions History',
+                            url: subscriptionsHistory()?.url,
+                            isActive: routeName === 'team.subscriptions.history' || routeName === 'team.subscriptions.history',
                         },
+                        // {
+                        //     title: 'Subscriptions',
+                        //     url: '/team/subscriptions',
+                        //     isActive: routeName === 'team.subscriptions.index',
+                        // },
                     ],
                 },
             ]

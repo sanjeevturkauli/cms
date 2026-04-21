@@ -51,6 +51,7 @@ interface Team {
     joined_at?: string;
     can_be_deleted?: boolean;
     total_teams_owned?: number;
+    signed_url?: string;
 }
 
 interface Props {
@@ -137,7 +138,7 @@ export default function TeamsIndex({ teams, isTeamOwner, permissions }: Props) {
 
     const handleRefresh = () => {
         setIsRefreshing(true);
-        router.get('/teams', {}, {
+        router.get('/team', {}, {
             preserveScroll: true,
             preserveState: true,
             onFinish: () => setIsRefreshing(false),
@@ -279,7 +280,11 @@ export default function TeamsIndex({ teams, isTeamOwner, permissions }: Props) {
                                                     <div className="flex-1">
                                                         <CardTitle 
                                                             className="cursor-pointer hover:text-primary transition-colors"
-                                                            onClick={() => router.get(`/teams/${team.id}/info`)}
+                                                            onClick={() => {
+                                                                if (team.signed_url) {
+                                                                    router.visit(team.signed_url);
+                                                                }
+                                                            }}
                                                         >
                                                             {team.name}
                                                         </CardTitle>
