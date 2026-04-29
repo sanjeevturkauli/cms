@@ -77,7 +77,7 @@ class Team extends Model
 
     public function scopeIsApproved($query)
     {
-        return $query->where('status', 'active');
+        return $query->where('status', 'approved');
     }
 
     public function scopeIsPending($query)
