@@ -28,6 +28,7 @@ export interface SharedData {
     auth: Auth;
     sidebarOpen: boolean;
     currentTeamId?: number | null;
+    notificationCount?: number;
     wallet?: {
         balance: string;
         raw_balance: number;
@@ -54,5 +55,12 @@ export interface User {
     two_factor_enabled?: boolean;
     created_at: string;
     updated_at: string;
+    roles?: Array<{
+        id: number;
+        name: string;
+        guard_name: string;
+        created_at: string;
+        updated_at: string;
+    }>;
     [key: string]: unknown; // This allows for additional properties...
 }

@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { ThemeToggle } from "@/components/theme-toggle"
+import { NotificationBell } from "@/components/notification-bell"
 import { usePage } from "@inertiajs/react"
 import { Wallet } from "lucide-react"
 import { SharedData } from "@/types"
@@ -41,6 +42,7 @@ export function SiteHeader() {
               <span className="text-xs sm:text-sm font-semibold text-green-700 truncate">{wallet.balance}</span>
             </div>
           )}
+          <NotificationBell />
           <ThemeToggle />
           <Button variant="ghost" size="sm" className="hidden sm:flex cursor-pointer">
             {role ? role.charAt(0).toUpperCase() + role.slice(1) : ''}

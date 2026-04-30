@@ -49,10 +49,13 @@ class CreateNewUser implements CreatesNewUsers
             ]);
 
             if (($input['user_type'] ?? null) === 'team') {
-                Team::create([
+                $team = Team::create([
                     'user_id' => $user->id,
                     'name' => $input['team_name'],
                 ]);
+
+                // Trigger notification for new team
+                \App\Services\NotificationService::notifyNewTeam($team);
 
                 $teamRole = Role::firstOrCreate(['name' => 'team']);
                 $user->assignRole($teamRole);
@@ -65,10 +68,13 @@ class CreateNewUser implements CreatesNewUsers
                     ]);
                 }
 
-                Member::create([
+                $member = Member::create([
                     'user_id' => $user->id,
                     'team_id' => $team->id,
                 ]);
+
+                // Trigger notification for new member
+                \App\Services\NotificationService::notifyNewMember($member);
 
                 $memberRole = Role::firstOrCreate(['name' => 'member']);
                 $user->assignRole($memberRole);

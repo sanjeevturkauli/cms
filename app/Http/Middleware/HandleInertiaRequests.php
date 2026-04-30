@@ -103,6 +103,7 @@ class HandleInertiaRequests extends Middleware
             'currentTeamId' => $request->session()->get('current_team_id'),
             'wallet' => $wallet,
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
+            'notificationCount' => $request->user() ? \App\Services\NotificationService::getUnreadCount($request->user()->id) : 0,
             'siteSettings' => [
                 'site_name' => \App\Models\Setting::get('site_name', config('app.name')),
                 'site_description' => \App\Models\Setting::get('site_description', 'Content Management System'),

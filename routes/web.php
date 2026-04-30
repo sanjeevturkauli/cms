@@ -53,6 +53,73 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Route::delete('/members/{member}', [TeamController::class, 'removeMember'])->name('members.remove');
 
     Route::post('/switch/{team}', [TeamController::class, 'switchTeam'])->name('switch');
+    
+    // Role-based Notification Routes
+    Route::middleware(['role:admin'])->prefix('admin')->name('admin.')->group(function () {
+        Route::prefix('notifications')->name('notifications.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Admin\NotificationController::class, 'index'])->name('index');
+            Route::get('/unread-count', [\App\Http\Controllers\Admin\NotificationController::class, 'getUnreadCount'])->name('unread-count');
+            Route::get('/recent', [\App\Http\Controllers\Admin\NotificationController::class, 'getRecent'])->name('recent');
+            Route::patch('/{notification}/read', [\App\Http\Controllers\Admin\NotificationController::class, 'markAsRead'])->name('mark-read');
+            Route::patch('/mark-all-read', [\App\Http\Controllers\Admin\NotificationController::class, 'markAllAsRead'])->name('mark-all-read');
+            Route::delete('/{notification}', [\App\Http\Controllers\Admin\NotificationController::class, 'destroy'])->name('destroy');
+        });
+    });
+
+    Route::middleware(['role:team'])->prefix('team')->name('team.')->group(function () {
+        Route::prefix('notifications')->name('notifications.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Team\NotificationController::class, 'index'])->name('index');
+            Route::get('/unread-count', [\App\Http\Controllers\Team\NotificationController::class, 'getUnreadCount'])->name('unread-count');
+            Route::get('/recent', [\App\Http\Controllers\Team\NotificationController::class, 'getRecent'])->name('recent');
+            Route::patch('/{notification}/read', [\App\Http\Controllers\Team\NotificationController::class, 'markAsRead'])->name('mark-read');
+            Route::patch('/mark-all-read', [\App\Http\Controllers\Team\NotificationController::class, 'markAllAsRead'])->name('mark-all-read');
+            Route::delete('/{notification}', [\App\Http\Controllers\Team\NotificationController::class, 'destroy'])->name('destroy');
+        });
+    });
+
+    Route::middleware(['role:member'])->prefix('member')->name('member.')->group(function () {
+        Route::prefix('notifications')->name('notifications.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Member\NotificationController::class, 'index'])->name('index');
+            Route::get('/unread-count', [\App\Http\Controllers\Member\NotificationController::class, 'getUnreadCount'])->name('unread-count');
+            Route::get('/recent', [\App\Http\Controllers\Member\NotificationController::class, 'getRecent'])->name('recent');
+            Route::patch('/{notification}/read', [\App\Http\Controllers\Member\NotificationController::class, 'markAsRead'])->name('mark-read');
+            Route::patch('/mark-all-read', [\App\Http\Controllers\Member\NotificationController::class, 'markAllAsRead'])->name('mark-all-read');
+            Route::delete('/{notification}', [\App\Http\Controllers\Member\NotificationController::class, 'destroy'])->name('destroy');
+        });
+    });
+    
+    // Test route to create sample notifications (remove in production)
+    Route::get('/test-notifications', function () {
+        $user = Auth::user();
+        
+        // Create a test new member notification
+        \App\Models\Notification::create([
+            'user_id' => $user->id,
+            'type' => 'new_member',
+            'title' => 'New Member Joined',
+            'message' => 'John Doe has joined your team "Development Team"',
+            'data' => [
+                'member_name' => 'John Doe',
+                'member_email' => 'john@example.com',
+                'team_name' => 'Development Team',
+            ],
+        ]);
+        
+        // Create a test new team notification
+        \App\Models\Notification::create([
+            'user_id' => $user->id,
+            'type' => 'new_team',
+            'title' => 'New Team Registration',
+            'message' => 'Jane Smith has registered a new team "Marketing Team"',
+            'data' => [
+                'team_name' => 'Marketing Team',
+                'team_owner_name' => 'Jane Smith',
+                'team_owner_email' => 'jane@example.com',
+            ],
+        ]);
+        
+        return redirect()->back()->with('success', 'Test notifications created!');
+    })->name('test-notifications');
 });
 
 // Include settings routes if they exist

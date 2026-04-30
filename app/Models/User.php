@@ -106,6 +106,11 @@ class User extends Authenticatable
         return $this->hasMany(Transaction::class);
     }
 
+    public function notifications()
+    {
+        return $this->hasMany(Notification::class);
+    }
+
     // Create wallet when user is created
     protected static function boot()
     {

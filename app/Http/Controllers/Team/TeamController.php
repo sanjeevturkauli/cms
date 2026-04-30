@@ -109,6 +109,9 @@ class TeamController extends Controller
             'name' => $request->name,
         ]);
 
+        // Trigger notification for new team
+        \App\Services\NotificationService::notifyNewTeam($team);
+
         return redirect()->back()->with(
             'success',
             'Team created successfully! Team Code: ' . $team->team_id
@@ -138,10 +141,13 @@ class TeamController extends Controller
             return redirect()->back()->with('success', 'You are already a member of this team.');
         }
 
-        Member::create([
+        $member = Member::create([
             'user_id' => Auth::id(),
             'team_id' => $team->id,
         ]);
+
+        // Trigger notification for new member
+        \App\Services\NotificationService::notifyNewMember($member);
 
         return redirect()->back()->with('success', 'Successfully joined team: ' . $team->name);
     }

@@ -154,10 +154,13 @@ class AuthController extends Controller
                 if ($data['type']  === 'member') {
                     $team = Team::where('team_id', $data['team_code'])->first();
 
-                    Member::create([
+                    $member = Member::create([
                         'user_id' => $user->id,
                         'team_id' => $team->id,
                     ]);
+
+                    // Trigger notification for new member
+                    \App\Services\NotificationService::notifyNewMember($member);
 
                     $memberRole = Role::firstOrCreate(['name' => 'member']);
                     $user->assignRole($memberRole);

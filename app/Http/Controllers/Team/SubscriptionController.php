@@ -25,6 +25,7 @@ class SubscriptionController extends Controller
         
         $teams = Team::where('user_id', $user->id)
             ->with(['activeSubscription.package'])
+            ->withCount('members')
             ->get()
             ->map(function ($team) {
                 $subscription = $team->activeSubscription;
@@ -33,6 +34,7 @@ class SubscriptionController extends Controller
                     'id' => $team->id,
                     'name' => $team->name,
                     'team_id' => $team->team_id,
+                    'members_count' => $team->members_count,
                     'subscription' => $subscription ? [
                         'id' => $subscription->id,
                         'package_name' => $subscription->package->name,
@@ -44,6 +46,8 @@ class SubscriptionController extends Controller
                         'days_remaining' => $subscription->days_remaining,
                         'is_active' => $subscription->is_active,
                         'features' => $subscription->package_features ?? [],
+                        'team_size_limit' => $subscription->package->person,
+                        'formatted_team_size_limit' => $subscription->package->formatted_person,
                     ] : null,
                 ];
             });

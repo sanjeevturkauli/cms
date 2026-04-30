@@ -58,12 +58,15 @@ interface Subscription {
     days_remaining: number;
     is_active: boolean;
     features: string[];
+    team_size_limit?: number;
+    formatted_team_size_limit?: string;
 }
 
 interface Team {
     id: number;
     name: string;
     team_id: string;
+    members_count: number;
     subscription: Subscription | null;
 }
 
@@ -774,10 +777,14 @@ export default function TeamSubscriptionsIndex({ teams, packages, wallet, paymen
                                                     <h3 className="font-semibold text-lg">{team.name}</h3>
                                                     {team.subscription && getStatusBadge(team.subscription)}
                                                 </div>
-                                                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3 text-sm">
                                                     <div>
                                                         <span className="font-medium">Package:</span>
                                                         <div className="text-base sm:text-lg font-semibold">{team.subscription!.package_name}</div>
+                                                    </div>
+                                                    <div>
+                                                        <span className="font-medium">Members:</span>
+                                                        <div className="text-base sm:text-lg font-semibold">{team.members_count}</div>
                                                     </div>
                                                     <div>
                                                         <span className="font-medium">Amount Paid:</span>
@@ -1475,7 +1482,7 @@ export default function TeamSubscriptionsIndex({ teams, packages, wallet, paymen
                                                 <span className="font-medium text-blue-900">{selectedPackage.duration_range}</span>
                                             </div>
                                             <div className="flex justify-between text-sm">
-                                                <span className="text-blue-800">Team Size:</span>
+                                                <span className="text-blue-800">Team Size Limit:</span>
                                                 <span className="font-medium text-blue-900">{selectedPackage.formatted_person}</span>
                                             </div>
                                             <div className="flex justify-between text-sm border-t border-blue-300 pt-2 mt-2">
