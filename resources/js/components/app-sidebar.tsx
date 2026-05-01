@@ -99,9 +99,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             ? [
                 {
                     title: 'Teams',
-                    url: '/teams',
+                    url: '/member/teams',
                     icon: Users,
-                    isActive: routeName === 'teams.index',
+                    isActive: routeName === 'member.teams',
                 },
                 {
                     title: 'Subscriptions',

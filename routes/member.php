@@ -33,3 +33,6 @@ Route::post('/join', [TeamController::class, 'join'])->middleware('permission:jo
 
 // Member Dashboard
 Route::get('dashboard', [MemberController::class, 'dashboard'])->name('dashboard');
+
+// Member Teams - Show all teams where member is part of
+Route::get('/teams', [MemberController::class, 'teams'])->name('teams');
