@@ -391,7 +391,7 @@ class PaymentController extends Controller
 
         $team->update([
             'is_active' => true,
-            'status' => 'active',
+            'status' => 'approved',
         ]);
 
         $transaction->update(['subscription_id' => $subscription->id]);

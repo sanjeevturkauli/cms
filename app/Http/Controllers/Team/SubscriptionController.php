@@ -179,7 +179,7 @@ class SubscriptionController extends Controller
             
             $team->update([
                 'is_active' => true,
-                'status' => 'active',
+                'status' => 'approved',
             ]);
             
             $subscriptionId = $existingSubscription->id;
@@ -204,7 +204,7 @@ class SubscriptionController extends Controller
             
             $team->update([
                 'is_active' => true,
-                'status' => 'active',
+                'status' => 'approved',
             ]);
             
             $subscriptionId = $newSubscription->id;

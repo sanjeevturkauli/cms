@@ -24,7 +24,7 @@ class TeamInfoController extends Controller
         $user = Auth::user();
 
         // Check if user owns this team or is a member
-        $isOwner = $team->user_id === $user->id;
+        $isOwner = $team->user_id == $user->id;
         $isMember = $team->members()->where('user_id', $user->id)->exists();
 
         if (!$isOwner && !$isMember) {
