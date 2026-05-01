@@ -87,6 +87,67 @@ class Team extends Model
 
     public function scopeActive($query)
     {
-        return $query->where('is_active', true)->where('status', 'active');
+        return $query->where('is_active', true)->where('status', 'approved');
+    }
+
+    /**
+     * Get the member limit for this team based on team info
+     */
+    public function getMemberLimit(): int
+    {
+        // First check team info
+        if ($this->teamInfo && $this->teamInfo->total_member_limit > 0) {
+            return $this->teamInfo->total_member_limit;
+        }
+        
+        // Fallback to subscription package limit
+        $subscription = $this->activeSubscription;
+        
+        if (!$subscription || !$subscription->package) {
+            return 0; // No subscription = no members allowed
+        }
+        
+        return $subscription->package->person ?? 0;
+    }
+
+    /**
+     * Get current member count (excluding owner)
+     */
+    public function getCurrentMemberCount(): int
+    {
+        return $this->members()->count();
+    }
+
+    /**
+     * Check if team can accept new members
+     */
+    public function canAcceptNewMembers(): bool
+    {
+        $memberLimit = $this->getMemberLimit();
+        $currentCount = $this->getCurrentMemberCount();
+        
+        return $currentCount < $memberLimit;
+    }
+
+    /**
+     * Get remaining member slots
+     */
+    public function getRemainingMemberSlots(): int
+    {
+        $memberLimit = $this->getMemberLimit();
+        $currentCount = $this->getCurrentMemberCount();
+        
+        return max(0, $memberLimit - $currentCount);
+    }
+
+    /**
+     * Check if adding N members would exceed limit
+     */
+    public function wouldExceedLimit(int $additionalMembers = 1): bool
+    {
+        $memberLimit = $this->getMemberLimit();
+        $currentCount = $this->getCurrentMemberCount();
+        
+        return ($currentCount + $additionalMembers) > $memberLimit;
     }
 }

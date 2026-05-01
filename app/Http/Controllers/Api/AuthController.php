@@ -115,7 +115,7 @@ class AuthController extends Controller
                 'string',
                 'size:8',
                 function ($attribute, $value, $fail) {
-                    $team = Team::where('team_id', $value)->first();
+                    $team = Team::where('team_id', $value)->with('teamInfo')->first();
                     
                     if (!$team) {
                         $fail('Invalid team code. Please check the team code and try again.');
@@ -134,6 +134,14 @@ class AuthController extends Controller
                             default => 'This team is not available for new members at this time.',
                         };
                         $fail($statusMessage);
+                        return;
+                    }
+
+                    // Check member limit
+                    if (!$team->canAcceptNewMembers()) {
+                        $memberLimit = $team->getMemberLimit();
+                        $currentCount = $team->getCurrentMemberCount();
+                        $fail("This team has reached its member limit ({$currentCount}/{$memberLimit}). Please contact the team administrator to upgrade the subscription.");
                         return;
                     }
                 },
@@ -176,7 +184,7 @@ class AuthController extends Controller
                     $user->assignRole($teamRole);
                     
                 } elseif ($data['type'] === 'member') {
-                    $team = Team::where('team_id', $data['team_code'])->first();
+                    $team = Team::where('team_id', $data['team_code'])->with('teamInfo')->first();
                     
                     $member = Member::create([
                         'user_id' => $user->id,
