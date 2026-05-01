@@ -15,8 +15,13 @@ class ApiAuthMiddleware
     {
         // Check if user is authenticated via API guard
         if (!Auth::guard('api')->check()) {
-            return $this->response(401, 'Unauthenticated', [], false);
+            return $this->response(401, 'Unauthorized. Please login first.', [], false);
         }
+
+        // Set the authenticated user in the request for easy access
+        $request->setUserResolver(function () {
+            return Auth::guard('api')->user();
+        });
 
         return $next($request);
     }

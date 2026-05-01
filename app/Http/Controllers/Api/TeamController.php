@@ -13,6 +13,7 @@ class TeamController extends Controller
     public function myTeams(Request $request, $id = null)
     {
         try {
+            // Get authenticated user (set by middleware)
             $user = $request->user();
 
             if (!$user) {
