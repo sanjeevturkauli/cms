@@ -49,7 +49,11 @@ class TeamController extends Controller
         $ownedTeam = Team::where('id', $teamId)
             ->where('user_id', $user->id)
             ->withCount('members')
-            ->with(['members.user:id,name,email,is_active', 'members.user.roles:id,name'])
+            ->with([
+                'members.user:id,name,email,is_active', 
+                'members.user.roles:id,name',
+                'teamInfo'
+            ])
             ->first();
 
         // Check if user is a member of this team
@@ -59,7 +63,12 @@ class TeamController extends Controller
                 ->whereHas('team', function ($query) use ($teamId) {
                     $query->where('id', $teamId);
                 })
-                ->with(['team.user:id,name,email', 'team.members.user:id,name,email,is_active', 'team.members.user.roles:id,name'])
+                ->with([
+                    'team.user:id,name,email', 
+                    'team.members.user:id,name,email,is_active', 
+                    'team.members.user.roles:id,name',
+                    'team.teamInfo'
+                ])
                 ->first();
 
             $memberTeam = $memberRecord ? $memberRecord->team : null;
@@ -76,12 +85,47 @@ class TeamController extends Controller
             ], 404);
         }
 
+        // Prepare team info data
+        $teamInfoData = null;
+        if ($team->teamInfo) {
+            $teamInfoData = [
+                'id' => $team->teamInfo->id,
+                'plan' => $team->teamInfo->plan,
+                'duration_months' => $team->teamInfo->duration_months,
+                'plan_start_date' => $team->teamInfo->plan_start_date?->format('Y-m-d'),
+                'plan_end_date' => $team->teamInfo->plan_end_date?->format('Y-m-d'),
+                'total_member_limit' => $team->teamInfo->total_member_limit,
+                'current_members' => $team->teamInfo->current_members,
+                'remaining_member_slots' => $team->teamInfo->remaining_member_slots,
+                'member_usage_percentage' => $team->teamInfo->member_usage_percentage,
+                'monthly_amount' => $team->teamInfo->monthly_amount,
+                'total_amount' => $team->teamInfo->total_amount,
+                'paid_members' => $team->teamInfo->paid_members,
+                'location' => $team->teamInfo->location,
+                'address' => $team->teamInfo->address,
+                'city' => $team->teamInfo->city,
+                'state' => $team->teamInfo->state,
+                'country' => $team->teamInfo->country,
+                'pincode' => $team->teamInfo->pincode,
+                'latitude' => $team->teamInfo->latitude,
+                'longitude' => $team->teamInfo->longitude,
+                'description' => $team->teamInfo->description,
+                'category' => $team->teamInfo->category,
+                'settings' => $team->teamInfo->settings,
+                'is_active' => $team->teamInfo->is_active,
+                'plan_status' => $team->teamInfo->plan_status,
+                'is_expired' => $team->teamInfo->is_expired,
+                'last_activity' => $team->teamInfo->last_activity?->format('Y-m-d H:i:s'),
+            ];
+        }
+
         // Prepare detailed team information
         $teamData = [
             'id' => $team->id,
             'name' => $team->name,
             'team_id' => $team->team_id,
             'is_active' => $team->is_active,
+            'status' => $team->status,
             'members_count' => $ownedTeam ? $team->members_count : $team->members->count(),
             'role_in_team' => $ownedTeam ? 'owner' : 'member',
             'is_owner' => (bool) $ownedTeam,
@@ -90,11 +134,7 @@ class TeamController extends Controller
             'joined_at' => $ownedTeam
                 ? $team->created_at->format('Y-m-d H:i:s')
                 : ($memberRecord ? $memberRecord->created_at->format('Y-m-d H:i:s') : null),
-            'description' => $team->description ?? null,
-            'settings' => [
-                'allow_member_invite' => $team->allow_member_invite ?? true,
-                'is_public' => $team->is_public ?? false,
-            ],
+            'team_info' => $teamInfoData,
             'members' => $team->members->map(function ($member) {
                 return [
                     'id' => $member->id,
@@ -136,19 +176,47 @@ class TeamController extends Controller
         // Get teams where user is the owner
         $ownedTeams = Team::where('user_id', $user->id)
             ->withCount('members')
-            ->with(['members.user:id,name,email'])
+            ->with(['members.user:id,name,email', 'teamInfo'])
             ->get()
             ->map(function ($team) use ($user) {
+                // Prepare team info data
+                $teamInfoData = null;
+                if ($team->teamInfo) {
+                    $teamInfoData = [
+                        'id' => $team->teamInfo->id,
+                        'plan' => $team->teamInfo->plan,
+                        'duration_months' => $team->teamInfo->duration_months,
+                        'plan_start_date' => $team->teamInfo->plan_start_date?->format('Y-m-d'),
+                        'plan_end_date' => $team->teamInfo->plan_end_date?->format('Y-m-d'),
+                        'total_member_limit' => $team->teamInfo->total_member_limit,
+                        'current_members' => $team->teamInfo->current_members,
+                        'remaining_member_slots' => $team->teamInfo->remaining_member_slots,
+                        'member_usage_percentage' => $team->teamInfo->member_usage_percentage,
+                        'monthly_amount' => $team->teamInfo->monthly_amount,
+                        'total_amount' => $team->teamInfo->total_amount,
+                        'paid_members' => $team->teamInfo->paid_members,
+                        'location' => $team->teamInfo->location,
+                        'address' => $team->teamInfo->address,
+                        'city' => $team->teamInfo->city,
+                        'state' => $team->teamInfo->state,
+                        'country' => $team->teamInfo->country,
+                        'plan_status' => $team->teamInfo->plan_status,
+                        'is_expired' => $team->teamInfo->is_expired,
+                    ];
+                }
+
                 return [
                     'id' => $team->id,
                     'name' => $team->name,
                     'team_id' => $team->team_id,
                     'is_active' => $team->is_active,
+                    'status' => $team->status,
                     'members_count' => $team->members_count,
                     'role_in_team' => 'owner',
                     'is_owner' => true,
                     'created_at' => $team->created_at->format('Y-m-d H:i:s'),
                     'joined_at' => $team->created_at->format('Y-m-d H:i:s'),
+                    'team_info' => $teamInfoData,
                     'members' => $team->members->map(function ($member) {
                         return [
                             'id' => $member->id,
@@ -168,20 +236,49 @@ class TeamController extends Controller
 
         // Get teams where user is a member
         $memberTeams = Member::where('user_id', $user->id)
-            ->with(['team.user:id,name,email', 'team.members.user:id,name,email'])
+            ->with(['team.user:id,name,email', 'team.members.user:id,name,email', 'team.teamInfo'])
             ->get()
             ->map(function ($member) {
                 $team = $member->team;
+                
+                // Prepare team info data
+                $teamInfoData = null;
+                if ($team->teamInfo) {
+                    $teamInfoData = [
+                        'id' => $team->teamInfo->id,
+                        'plan' => $team->teamInfo->plan,
+                        'duration_months' => $team->teamInfo->duration_months,
+                        'plan_start_date' => $team->teamInfo->plan_start_date?->format('Y-m-d'),
+                        'plan_end_date' => $team->teamInfo->plan_end_date?->format('Y-m-d'),
+                        'total_member_limit' => $team->teamInfo->total_member_limit,
+                        'current_members' => $team->teamInfo->current_members,
+                        'remaining_member_slots' => $team->teamInfo->remaining_member_slots,
+                        'member_usage_percentage' => $team->teamInfo->member_usage_percentage,
+                        'monthly_amount' => $team->teamInfo->monthly_amount,
+                        'total_amount' => $team->teamInfo->total_amount,
+                        'paid_members' => $team->teamInfo->paid_members,
+                        'location' => $team->teamInfo->location,
+                        'address' => $team->teamInfo->address,
+                        'city' => $team->teamInfo->city,
+                        'state' => $team->teamInfo->state,
+                        'country' => $team->teamInfo->country,
+                        'plan_status' => $team->teamInfo->plan_status,
+                        'is_expired' => $team->teamInfo->is_expired,
+                    ];
+                }
+
                 return [
                     'id' => $team->id,
                     'name' => $team->name,
                     'team_id' => $team->team_id,
                     'is_active' => $team->is_active,
+                    'status' => $team->status,
                     'members_count' => $team->members->count(),
                     'role_in_team' => 'member',
                     'is_owner' => false,
                     'created_at' => $team->created_at->format('Y-m-d H:i:s'),
                     'joined_at' => $member->created_at->format('Y-m-d H:i:s'),
+                    'team_info' => $teamInfoData,
                     'members' => $team->members->map(function ($teamMember) {
                         return [
                             'id' => $teamMember->id,
