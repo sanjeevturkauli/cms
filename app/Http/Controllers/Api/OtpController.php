@@ -73,27 +73,31 @@ class OtpController extends Controller
                     get_key('salt_key')
                 );
             } catch (\Throwable $e) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Invalid or tampered token',
-                ], Response::HTTP_BAD_REQUEST);
+                return $this->response(
+                    Response::HTTP_BAD_REQUEST,
+                    'Invalid or tampered token',
+                    [],
+                    false
+                );
             }
 
             if (empty($decryptData['id']) || empty($decryptData['email'])) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Invalid payload data',
-                ], Response::HTTP_BAD_REQUEST);
+                return $this->response(
+                    Response::HTTP_BAD_REQUEST,
+                    'Invalid payload data',
+                    [],
+                    false
+                );
             }
 
             $otp = Otp::where('user_id', $decryptData['id'])->where('code', $validated['code'])->where('used', false)->latest()->first();
 
             if (!$otp) {
-                return response()->json(['success' => false, 'message' => 'Invalid OTP',], Response::HTTP_BAD_REQUEST);
+                return $this->response(Response::HTTP_BAD_REQUEST, 'Invalid OTP', [], false);
             }
 
             if ($otp->isExpired()) {
-                return response()->json(['success' => false, 'message' => 'OTP expired',], Response::HTTP_BAD_REQUEST);
+                return $this->response(Response::HTTP_BAD_REQUEST, 'OTP expired', [], false);
             }
 
             DB::beginTransaction();
@@ -104,37 +108,51 @@ class OtpController extends Controller
 
             if (!$user) {
                 DB::rollBack();
-
-                return response()->json([
-                    'success' => false,
-                    'message' => 'User not found',
-                ], Response::HTTP_NOT_FOUND);
+                return $this->response(
+                    Response::HTTP_NOT_FOUND,
+                    'User not found',
+                    [],
+                    false
+                );
             }
 
-            if (is_null($user->email_verified_at)) {
+            if ($user->email_verified_at === null) {
                 $user->update(['email_verified_at' => now()]);
             }
 
-            $token = $user->createToken('auth_token')->plainTextToken;
+            $token = $user->createToken('API Token')->accessToken;
 
             DB::commit();
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Login successful',
-                'data' => [
-                    'token' => $token,
-                    'token_type' => 'Bearer',
-                    'user' => formatUser($user),
-                ],
+            return $this->response(Response::HTTP_OK, 'Login successful', [
+                'user' => $this->formatUser($user),
+                'token' => $token,
+                'token_type' => 'Bearer',
             ]);
         } catch (\Throwable $e) {
             report($e);
-
-            return response()->json([
-                'success' => false,
-                'message' => 'Something went wrong. Please try again.',
-            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+            return $this->response(
+                Response::HTTP_INTERNAL_SERVER_ERROR,
+                'Something went wrong. Please try again.',
+                [],
+                false
+            );
         }
+    }
+
+    protected function formatUser(User $user): array
+    {
+        return [
+            'id' => $user->id,
+            'name' => $user->name,
+            'email' => $user->email,
+            'is_active' => $user->is_active,
+            'phone_number' => $user->mobile,
+            'is_mpin' => $user->mpin ? true : false,
+            'role' => $user->getRoleNames()->first(),
+            'created_at' => $user->created_at?->toIso8601String(),
+            'updated_at' => $user->updated_at?->toIso8601String(),
+            'profile_photo' => $user->profile_photo_path ? asset($user->profile_photo_path) : null,
+        ];
     }
 }
