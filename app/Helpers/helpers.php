@@ -134,7 +134,21 @@ if (!function_exists('generate_salt_key')) {
 if (!function_exists('get_key')) {
     function get_key($name = 'salt_key'): string
     {
-        return config('app.' . $name);
+        // Map salt_key to use APP_KEY for encryption
+        if ($name == 'salt_key') {
+            $key = config('app.key');
+            if (!$key) {
+                throw new \RuntimeException('APP_KEY is not set. Please run php artisan key:generate');
+            }
+            return $key;
+        }
+        
+        $configKey = config('app.' . $name);
+        if (!$configKey) {
+            throw new \RuntimeException("Configuration key 'app.{$name}' is not set");
+        }
+        
+        return $configKey;
     }
 }
 

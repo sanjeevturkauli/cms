@@ -25,19 +25,43 @@ class CreateNewUser implements CreatesNewUsers
             'user_type' => ['required', 'in:team,member'],
             'email' => ['required', 'string', 'email', 'max:255', Rule::unique(User::class)],
             'team_name' => ['required_if:user_type,team', 'string', 'max:255'],
-            'team_code' => ['required_if:user_type,member', 'string', 'size:8', 'exists:teams,team_id'],
+            'team_code' => [
+                'required_if:user_type,member',
+                'string',
+                'size:8',
+                function ($attribute, $value, $fail) {
+                    if (!$value) return; // Skip if empty (handled by required_if)
+                    
+                    $team = Team::where('team_id', $value)->first();
+                    
+                    if (!$team) {
+                        $fail('Invalid team code. Please check the team code and try again.');
+                        return;
+                    }
+                    
+                    if (!$team->is_active) {
+                        $fail('This team is currently inactive. Please contact the team administrator.');
+                        return;
+                    }
+                    
+                    if ($team->status !== 'approved') {
+                        $statusMessage = match($team->status) {
+                            'pending' => 'This team is still pending approval. Please wait for admin approval.',
+                            'rejected' => 'This team has been rejected. Please contact support for more information.',
+                            default => 'This team is not available for new members at this time.',
+                        };
+                        $fail($statusMessage);
+                        return;
+                    }
+                },
+            ],
         ];
 
         Validator::make($input, $rules)->validate();
 
         if (($input['user_type'] ?? null) === 'member') {
-            $team = Team::where('team_id', $input['team_code'])->isActive()->isApproved()->first();
-
-            if (!$team) {
-                throw ValidationException::withMessages([
-                    'team_code' => 'This team is not available right now. Please contact the team administrator for help.',
-                ]);
-            }
+            // Team validation is already done in the validation rules above
+            $team = Team::where('team_id', $input['team_code'])->first();
         }
 
         return DB::transaction(function () use ($input) {
@@ -60,13 +84,8 @@ class CreateNewUser implements CreatesNewUsers
                 $teamRole = Role::firstOrCreate(['name' => 'team']);
                 $user->assignRole($teamRole);
             } else {
-                $team = Team::where('team_id', $input['team_code'])->where('is_active', true)->where('status', 'approved')->first();
-
-                if (!$team) {
-                    throw ValidationException::withMessages([
-                        'team_code' => 'This team is not available right now. Please contact the team administrator for help.',
-                    ]);
-                }
+                // Get the validated team (validation already done above)
+                $team = Team::where('team_id', $input['team_code'])->first();
 
                 $member = Member::create([
                     'user_id' => $user->id,

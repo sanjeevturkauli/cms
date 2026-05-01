@@ -5,7 +5,7 @@ namespace App\Http\Middleware;
 use App\Traits\ResponseHandler;
 use Closure;
 use Illuminate\Http\Request;
-use Laravel\Sanctum\PersonalAccessToken;
+use Illuminate\Support\Facades\Auth;
 
 class ApiAuthMiddleware
 {
@@ -13,21 +13,10 @@ class ApiAuthMiddleware
 
     public function handle(Request $request, Closure $next)
     {
-        $token = $request->bearerToken();
-
-        if (!$token) {
-            return $this->response(401, 'Unauthorized', [], false);
+        // Check if user is authenticated via API guard
+        if (!Auth::guard('api')->check()) {
+            return $this->response(401, 'Unauthenticated', [], false);
         }
-
-        $accessToken = PersonalAccessToken::findToken($token);
-
-        if (!$accessToken) {
-            return $this->response(401, 'You are unauthorized', [], false);
-        }
-
-        $request->setUserResolver(function () use ($accessToken) {
-            return $accessToken->tokenable;
-        });
 
         return $next($request);
     }

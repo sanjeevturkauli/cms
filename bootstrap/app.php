@@ -61,6 +61,20 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
+        // Handle authentication exceptions for API routes
+        $exceptions->render(function (\Illuminate\Auth\AuthenticationException $e, $request) {
+            if ($request->expectsJson() || $request->is('api/*')) {
+                return response()->json([
+                    'success' => false,
+                    'statusCode' => 401,
+                    'message' => 'Unauthenticated',
+                    'data' => []
+                ], 401);
+            }
+            
+            return redirect()->guest(route('login'));
+        });
+
         // Handle invalid signature exceptions
         $exceptions->render(function (\Illuminate\Routing\Exceptions\InvalidSignatureException $e, $request) {
             if ($request->expectsJson()) {

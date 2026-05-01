@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Models\User;
 use App\Models\Team;
 use App\Models\Member;
+use App\Services\NotificationService;
 use Illuminate\Support\Arr;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -16,7 +17,7 @@ use Illuminate\Support\Facades\Log;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
-use Laravel\Sanctum\PersonalAccessToken;
+use Laravel\Passport\Token;
 use Illuminate\Support\Facades\Validator;
 use Symfony\Component\HttpFoundation\Response;
 use Illuminate\Validation\ValidationException;
@@ -78,8 +79,9 @@ class AuthController extends Controller
 
 
 
-    public function register(Request $request): JsonResponse
+    public function register(Request $request)
     {
+
         $rules = [
             'name' => ['required', 'string', 'max:255'],
             'email' => [
@@ -112,7 +114,29 @@ class AuthController extends Controller
                 'required',
                 'string',
                 'size:8',
-                'exists:teams,team_id',
+                function ($attribute, $value, $fail) {
+                    $team = Team::where('team_id', $value)->first();
+                    
+                    if (!$team) {
+                        $fail('Invalid team code. Please check the team code and try again.');
+                        return;
+                    }
+                    
+                    if (!$team->is_active) {
+                        $fail('This team is currently inactive. Please contact the team administrator.');
+                        return;
+                    }
+                    
+                    if ($team->status !== 'approved') {
+                        $statusMessage = match($team->status) {
+                            'pending' => 'This team is still pending approval. Please wait for admin approval.',
+                            'rejected' => 'This team has been rejected. Please contact support for more information.',
+                            default => 'This team is not available for new members at this time.',
+                        };
+                        $fail($statusMessage);
+                        return;
+                    }
+                },
             ];
         }
 
@@ -132,17 +156,6 @@ class AuthController extends Controller
         try {
 
             $user = DB::transaction(function () use ($data) {
-                if ($data['type'] === 'member') {
-                    $team = Team::where('team_id', $data['team_code'])->where('is_active', true)->first();
-
-                    if (!$team) {
-                        throw ValidationException::withMessages([
-                            'team_code' =>
-                            'This team is not available right now. Please contact the team administrator.',
-                        ]);
-                    }
-                }
-
                 $user = User::create([
                     'name' => $data['name'],
                     'email' => $data['email'],
@@ -151,16 +164,26 @@ class AuthController extends Controller
                     'is_active' => true,
                 ]);
 
-                if ($data['type']  === 'member') {
-                    $team = Team::where('team_id', $data['team_code'])->first();
+                if ($data['type'] === 'team') {
+                    $team = Team::create([
+                        'user_id' => $user->id,
+                        'name' => $data['team_name'],
+                    ]);
 
+                    NotificationService::notifyNewTeam($team);
+                    
+                    $teamRole = Role::firstOrCreate(['name' => 'team']);
+                    $user->assignRole($teamRole);
+                    
+                } elseif ($data['type'] === 'member') {
+                    $team = Team::where('team_id', $data['team_code'])->first();
+                    
                     $member = Member::create([
                         'user_id' => $user->id,
                         'team_id' => $team->id,
                     ]);
-
-                    // Trigger notification for new member
-                    \App\Services\NotificationService::notifyNewMember($member);
+                    
+                    NotificationService::notifyNewMember($member);
 
                     $memberRole = Role::firstOrCreate(['name' => 'member']);
                     $user->assignRole($memberRole);
@@ -169,7 +192,7 @@ class AuthController extends Controller
                 return $user;
             });
 
-            $token = $user->createToken('auth_token')->plainTextToken;
+            $token = $user->createToken('API Token')->accessToken;
 
 
             if (is_null($user->email_verified_at)) {
@@ -183,14 +206,30 @@ class AuthController extends Controller
                 ], true);
             }
 
+            $successMessage = $data['type'] === 'team' 
+                ? 'Team registered successfully.' 
+                : 'Member registered successfully.';
+
+            $responseData = [
+                'user' => $this->formatUser($user),
+                'token' => $token,
+                'token_type' => 'Bearer',
+            ];
+
+            if ($data['type'] === 'team') {
+                $team = Team::where('user_id', $user->id)->latest()->first();
+                $responseData['team'] = [
+                    'id' => $team->id,
+                    'name' => $team->name,
+                    'team_id' => $team->team_id,
+                    'status' => $team->status,
+                ];
+            }
+
             return $this->response(
                 Response::HTTP_CREATED,
-                'User registered successfully.',
-                [
-                    'user' => $this->formatUser($user),
-                    'token' => $token,
-                    'token_type' => 'Bearer',
-                ]
+                $successMessage,
+                $responseData
             );
         } catch (ValidationException $e) {
 
@@ -281,7 +320,6 @@ class AuthController extends Controller
             );
         }
 
-        // Check if user is active (except for admin)
         if (!$user->hasRole('admin') && !$user->is_active) {
             Auth::logout();
             return $this->response(
@@ -293,7 +331,7 @@ class AuthController extends Controller
         }
 
 
-        $token = $user->createToken('auth_token')->plainTextToken;
+        $token = $user->createToken('API Token')->accessToken;
 
         if (is_null($user->email_verified_at)) {
             $this->OtpController->createOtpForUser($user);
@@ -316,36 +354,40 @@ class AuthController extends Controller
 
     public function logout(Request $request): JsonResponse
     {
-        $token = $request->bearerToken();
+        try {
+            $user = Auth::guard('api')->user();
+            
+            if (!$user) {
+                return $this->response(401, 'User not authenticated.', [], false);
+            }
 
-        if (!$token) {
-            return $this->response(400, 'No token provided.', [], false);
+            // Get the current access token and revoke it
+            $tokenId = $user->token()->id;
+            
+            // Revoke the current token
+            $user->tokens()->where('id', $tokenId)->update(['revoked' => true]);
+
+            return $this->response(200, 'Logged out successfully.', [], true);
+        } catch (\Exception $e) {
+            return $this->response(500, 'Logout unsuccessful: ' . $e->getMessage(), [], false);
         }
-
-        $accessToken = PersonalAccessToken::findToken($token);
-
-        if (!$accessToken) {
-            return $this->response(400, 'No active token found for the user.', [], false);
-        }
-
-        if ($accessToken->delete()) {
-            return $this->response(200, 'logged out successful.', [], true);
-        }
-
-        return $this->response(500, 'logged out unsuccessful', [], false);
     }
 
     public function profile(Request $request): JsonResponse
     {
         try {
-            $user = $request->user();
+            $user = Auth::guard('api')->user();
+
+            if (!$user) {
+                return $this->response(401, 'User not authenticated.', [], false);
+            }
 
             if ($request->isMethod('post')) {
                 if ($request->has('name') && $request->filled('name')) {
                     $user->name = $request->name;
                 }
                 if ($request->has('phone_number') && $request->filled('phone_number')) {
-                    $user->phone_number = $request->phone_number;
+                    $user->mobile = $request->phone_number;
                 }
 
                 if ($request->hasFile('profile')) {
@@ -381,7 +423,7 @@ class AuthController extends Controller
             'name' => $user->name,
             'email' => $user->email,
             'is_active' => $user->is_active,
-            'phone_number' => $user->phone_number,
+            'phone_number' => $user->mobile,
             'is_mpin' => $user->mpin ? true : false,
             'role' => $user->getRoleNames()->first(),
             'created_at' => $user->created_at?->toIso8601String(),

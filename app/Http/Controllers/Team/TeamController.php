@@ -121,16 +121,38 @@ class TeamController extends Controller
     public function join(Request $request)
     {
         $request->validate([
-            'team_code' => ['required', 'string', 'size:8', 'exists:teams,team_id'],
+            'team_code' => [
+                'required',
+                'string',
+                'size:8',
+                function ($attribute, $value, $fail) {
+                    $team = Team::where('team_id', $value)->first();
+                    
+                    if (!$team) {
+                        $fail('Invalid team code. Please check the team code and try again.');
+                        return;
+                    }
+                    
+                    if (!$team->is_active) {
+                        $fail('This team is currently inactive. Please contact the team administrator.');
+                        return;
+                    }
+                    
+                    if ($team->status !== 'approved') {
+                        $statusMessage = match($team->status) {
+                            'pending' => 'This team is still pending approval. Please wait for admin approval.',
+                            'rejected' => 'This team has been rejected. Please contact support for more information.',
+                            default => 'This team is not available for new members at this time.',
+                        };
+                        $fail($statusMessage);
+                        return;
+                    }
+                },
+            ],
         ]);
 
-        $team = Team::where('team_id', $request->team_code)->where('is_active', true)->where('status', 'approved')->first();
-
-        if (!$team) {
-            throw ValidationException::withMessages([
-                'team_code' => 'This team is not available right now. Please contact the team administrator for help.',
-            ]);
-        }
+        // Get the validated team (validation already done above)
+        $team = Team::where('team_id', $request->team_code)->first();
 
         // Check if user is already a member
         $existingMember = Member::where('user_id', Auth::id())
