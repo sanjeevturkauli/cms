@@ -1,7 +1,7 @@
 'use client';
 
 import { usePage } from '@inertiajs/react';
-import { Home, Shield, Users, Package, Settings, Receipt } from 'lucide-react';
+import { Home, Shield, Users, Package, Settings, Receipt, FileCheck, ScrollText } from 'lucide-react';
 import * as React from 'react';
 
 import { NavUser } from '@/components/nav-user';
@@ -32,6 +32,7 @@ const data = {
             title: 'Dashboards',
             url: dashboard()?.url,
             icon: Home,
+            isActive: false, // will be overridden dynamically
         }
     ],
 };
@@ -54,7 +55,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     // console.log('isTeamOwner', isTeamOwner);
 
     const dynamicNavMain = [
-        ...data.navMain,
+        {
+            title: 'Dashboards',
+            url: dashboard()?.url,
+            icon: Home,
+            isActive: routeName === 'admin.dashboard' || routeName === 'team.dashboard' || routeName === 'member.dashboard',
+        },
 
         ...(isTeamOwner
             ? [
@@ -68,12 +74,13 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                         routeName === 'teams.index' ||
                         routeName === 'team.subscriptions.index' ||
                         routeName === 'team.index' ||
+                        routeName === 'team.info' ||
                         routeName === 'team.subscriptions.history',
                     items: [
                         {
                             title: 'Teams',
                             url: teamsIndex()?.url,
-                            isActive: routeName === 'teams.index' || routeName === 'team.index',
+                            isActive: routeName === 'teams.index' || routeName === 'team.index' || routeName === 'team.info',
                         },
                         {
                             title: 'Members',
@@ -85,12 +92,13 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                             url: subscriptionsHistory()?.url,
                             isActive: routeName === 'team.subscriptions.history' || routeName === 'team.subscriptions.history',
                         },
-                        // {
-                        //     title: 'Subscriptions',
-                        //     url: '/team/subscriptions',
-                        //     isActive: routeName === 'team.subscriptions.index',
-                        // },
                     ],
+                },
+                {
+                    title: 'Activity Logs',
+                    url: '/team/activity-logs',
+                    icon: ScrollText,
+                    isActive: routeName === 'team.activity-logs.index',
                 },
             ]
             : []),
@@ -104,10 +112,16 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     isActive: routeName === 'member.teams',
                 },
                 {
-                    title: 'Subscriptions',
-                    url: '/team/subscriptions',
-                    icon: Package,
-                    isActive: routeName === 'team.subscriptions.index',
+                    title: 'Payments',
+                    url: '/member/payments',
+                    icon: Receipt,
+                    isActive: routeName === 'member.payments.index',
+                },
+                {
+                    title: 'Activity Logs',
+                    url: '/member/activity-logs',
+                    icon: ScrollText,
+                    isActive: routeName === 'member.activity-logs.index',
                 },
             ]
             : []),
@@ -146,6 +160,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     ],
                 },
                 {
+                    title: 'KYC Management',
+                    url: '/admin/kyc',
+                    icon: FileCheck,
+                    isActive: routeName === 'admin.kyc.index' || routeName === 'admin.kyc.show',
+                },
+                {
                     title: 'Roles & Permissions',
                     url: '#',
                     icon: Shield,
@@ -170,6 +190,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     url: transactionsIndex()?.url,
                     icon: Receipt,
                     isActive: routeName === 'admin.transactions.index' || routeName === 'admin.transactions.show',
+                },
+                {
+                    title: 'Activity Logs',
+                    url: '/admin/activity-logs',
+                    icon: ScrollText,
+                    isActive: routeName === 'admin.activity-logs.index',
                 },
                 {
                     title: 'Site Settings',

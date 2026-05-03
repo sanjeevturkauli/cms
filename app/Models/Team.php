@@ -91,7 +91,7 @@ class Team extends Model
     }
 
     /**
-     * Get the member limit for this team based on team info
+     * Get the member limit for this team based on team info or subscription
      */
     public function getMemberLimit(): int
     {
@@ -103,11 +103,12 @@ class Team extends Model
         // Fallback to subscription package limit
         $subscription = $this->activeSubscription;
         
-        if (!$subscription || !$subscription->package) {
-            return 0; // No subscription = no members allowed
+        if ($subscription && $subscription->package && $subscription->package->member_limit > 0) {
+            return $subscription->package->member_limit;
         }
         
-        return $subscription->package->person ?? 0;
+        // Default fallback - allow at least 1 member for basic functionality
+        return 1;
     }
 
     /**
@@ -121,10 +122,14 @@ class Team extends Model
     /**
      * Check if team can accept new members
      */
-    public function canAcceptNewMembers(): bool
+    public function canAcceptNewMembers()
     {
         $memberLimit = $this->getMemberLimit();
         $currentCount = $this->getCurrentMemberCount();
+        return $memberLimit;
+        
+        // Debug logging
+        \Log::info("Team {$this->name} - Limit: {$memberLimit}, Current: {$currentCount}");
         
         return $currentCount < $memberLimit;
     }
@@ -149,5 +154,82 @@ class Team extends Model
         $currentCount = $this->getCurrentMemberCount();
         
         return ($currentCount + $additionalMembers) > $memberLimit;
+    }
+
+    /**
+     * Get team owner's KYC status
+     */
+    public function getOwnerKycStatus(): ?string
+    {
+        return $this->user->kyc?->status;
+    }
+
+    /**
+     * Check if team owner's KYC is approved
+     */
+    public function isOwnerKycApproved(): bool
+    {
+        return $this->getOwnerKycStatus() === 'approved';
+    }
+
+    /**
+     * Get team owner's KYC completion percentage
+     */
+    public function getOwnerKycCompletionPercentage(): int
+    {
+        return $this->user->kyc?->completion_percentage ?? 0;
+    }
+
+    /**
+     * Check if team info is complete
+     */
+    public function isTeamInfoComplete(): bool
+    {
+        if (!$this->teamInfo) {
+            return false;
+        }
+
+        $requiredFields = [
+            'location',
+            'address', 
+            'city',
+            'state',
+            'country'
+        ];
+
+        foreach ($requiredFields as $field) {
+            if (empty($this->teamInfo->$field)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Get team completion status message
+     */
+    public function getCompletionStatusMessage(): ?string
+    {
+        $kycStatus = $this->getOwnerKycStatus();
+        $teamInfoComplete = $this->isTeamInfoComplete();
+
+        if (!$kycStatus) {
+            return 'Complete your KYC verification to unlock all features';
+        }
+
+        if ($kycStatus === 'pending') {
+            return 'KYC verification is pending approval';
+        }
+
+        if ($kycStatus === 'rejected') {
+            return 'KYC verification was rejected. Please resubmit';
+        }
+
+        if (!$teamInfoComplete) {
+            return 'Complete team location details to finish setup';
+        }
+
+        return null; // All complete
     }
 }

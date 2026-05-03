@@ -75,10 +75,13 @@ interface PackageType {
     name: string;
     price: number;
     formatted_price: string;
-    person: number;
-    formatted_person: string;
+    member_limit: number;
+    team_limit: number;
+    formatted_member_limit: string;
+    formatted_team_limit: string;
     features: string[];
     duration: number;
+    type: string;
     duration_range: string;
 }
 
@@ -120,6 +123,7 @@ interface Props {
         razorpay: PaymentGateway;
     };
     cancellationFee: number;
+    platformFee: number;
 }
 
 declare global {
@@ -140,7 +144,7 @@ interface StripeCardElement {
     on: (event: string, handler: (event: any) => void) => void;
 }
 
-export default function TeamSubscriptionsIndex({ teams, packages, wallet, paymentGateways, cancellationFee }: Props) {
+export default function TeamSubscriptionsIndex({ teams, packages, wallet, paymentGateways, cancellationFee, platformFee }: Props) {
     const { props } = usePage();
     const auth = props.auth as any; // Get authenticated user data
 
@@ -877,10 +881,9 @@ export default function TeamSubscriptionsIndex({ teams, packages, wallet, paymen
                                                     <CardTitle className="text-2xl font-bold">{pkg.name}</CardTitle>
                                                     <div className="text-4xl font-bold text-primary">
                                                         {pkg.formatted_price}
-                                                        <span className="text-lg font-normal text-muted-foreground">/year</span>
                                                     </div>
                                                     <CardDescription>
-                                                        {pkg.formatted_person} • {pkg.duration_range}
+                                                        {pkg.formatted_member_limit} • {pkg.formatted_team_limit} • {pkg.duration_range}
                                                     </CardDescription>
                                                 </CardHeader>
 
@@ -1202,8 +1205,23 @@ export default function TeamSubscriptionsIndex({ teams, packages, wallet, paymen
                             </label>
                         </div>
 
-                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                            <p className="text-sm text-blue-800">
+                        <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg p-3 space-y-2">
+                            {platformFee > 0 && (
+                                <div className="flex items-center justify-between text-sm">
+                                    <span className="text-blue-800 dark:text-blue-300 font-medium">Platform Fee:</span>
+                                    <span className="font-semibold text-blue-900 dark:text-blue-200">₹{platformFee.toLocaleString('en-IN')}</span>
+                                </div>
+                            )}
+                            {selectedPackageId && (() => {
+                                const pkg = packages.find(p => p.id === selectedPackageId);
+                                return pkg ? (
+                                    <div className="flex items-center justify-between text-sm border-t border-blue-200 dark:border-blue-700 pt-2">
+                                        <span className="text-blue-800 dark:text-blue-300 font-medium">Package Amount:</span>
+                                        <span className="font-semibold text-blue-900 dark:text-blue-200">{pkg.formatted_price}</span>
+                                    </div>
+                                ) : null;
+                            })()}
+                            <p className="text-xs text-blue-700 dark:text-blue-400">
                                 {selectedGateway === 'stripe'
                                     ? 'Stripe checkout will open in a dialog for secure payment processing.'
                                     : 'You will be redirected to the payment gateway to complete your transaction securely.'}

@@ -72,10 +72,13 @@ interface PackageType {
     name: string;
     price: number;
     formatted_price: string;
-    person: number;
-    formatted_person: string;
+    member_limit: number;
+    team_limit: number;
+    formatted_member_limit: string;
+    formatted_team_limit: string;
     features: string[];
     duration: number;
+    type: 'day' | 'month' | 'year';
     duration_range: string;
     is_active: boolean;
     created_at: string;
@@ -102,9 +105,11 @@ export default function AdminPackagesIndex({ packages, permissions }: Props) {
     const [packageForm, setPackageForm] = useState({
         name: '',
         price: '',
-        person: '',
+        member_limit: '',
+        team_limit: '1',
         features: [''],
         duration: 1,
+        type: 'month' as 'day' | 'month' | 'year',
         is_active: true,
     });
 
@@ -132,9 +137,11 @@ export default function AdminPackagesIndex({ packages, permissions }: Props) {
         setPackageForm({
             name: '',
             price: '',
-            person: '',
+            member_limit: '',
+            team_limit: '1',
             features: [''],
             duration: 1,
+            type: 'month',
             is_active: true,
         });
         setDialogType('create');
@@ -148,9 +155,11 @@ export default function AdminPackagesIndex({ packages, permissions }: Props) {
             setPackageForm({
                 name: pkg.name,
                 price: pkg.price.toString(),
-                person: pkg.person.toString(),
+                member_limit: pkg.member_limit.toString(),
+                team_limit: pkg.team_limit.toString(),
                 features: pkg.features.length > 0 ? pkg.features : [''],
                 duration: pkg.duration || 1,
+                type: pkg.type || 'month',
                 is_active: pkg.is_active,
             });
             setDialogType('edit');
@@ -171,7 +180,8 @@ export default function AdminPackagesIndex({ packages, permissions }: Props) {
         const data = {
             ...packageForm,
             price: parseFloat(packageForm.price),
-            person: parseInt(packageForm.person),
+            member_limit: parseInt(packageForm.member_limit),
+            team_limit: parseInt(packageForm.team_limit),
             features: packageForm.features.filter(f => f.trim() !== ''),
         };
 
@@ -215,9 +225,11 @@ export default function AdminPackagesIndex({ packages, permissions }: Props) {
         setPackageForm({
             name: '',
             price: '',
-            person: '',
+            member_limit: '',
+            team_limit: '1',
             features: [''],
             duration: 1,
+            type: 'month',
             is_active: true,
         });
         setDialogType(null);
@@ -358,7 +370,8 @@ export default function AdminPackagesIndex({ packages, permissions }: Props) {
                                                     <TableRow>
                                                         <TableHead>Package</TableHead>
                                                         <TableHead>Price</TableHead>
-                                                        <TableHead>Persons</TableHead>
+                                                        <TableHead>Member Limit</TableHead>
+                                                        <TableHead>Team Limit</TableHead>
                                                         <TableHead>Duration</TableHead>
                                                         <TableHead>Features</TableHead>
                                                         <TableHead>Status</TableHead>
@@ -384,7 +397,14 @@ export default function AdminPackagesIndex({ packages, permissions }: Props) {
                                                             <TableCell>
                                                                 <div className="flex items-center gap-2">
                                                                     <span className="font-medium">
-                                                                        {pkg.formatted_person}
+                                                                        {pkg.formatted_member_limit}
+                                                                    </span>
+                                                                </div>
+                                                            </TableCell>
+                                                            <TableCell>
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className="font-medium">
+                                                                        {pkg.formatted_team_limit}
                                                                     </span>
                                                                 </div>
                                                             </TableCell>
@@ -532,13 +552,19 @@ export default function AdminPackagesIndex({ packages, permissions }: Props) {
                                     <div className="space-y-2">
                                         <Label className="text-sm font-medium text-muted-foreground">Price</Label>
                                         <div className="p-3 bg-muted rounded-md font-medium">
-                                            {selectedPackage.formatted_price}/year
+                                            {selectedPackage.formatted_price}/{selectedPackage.type}
                                         </div>
                                     </div>
                                     <div className="space-y-2">
-                                        <Label className="text-sm font-medium text-muted-foreground">Persons Allowed</Label>
+                                        <Label className="text-sm font-medium text-muted-foreground">Member Limit</Label>
                                         <div className="p-3 bg-muted rounded-md">
-                                            {selectedPackage.formatted_person}
+                                            {selectedPackage.formatted_member_limit}
+                                        </div>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label className="text-sm font-medium text-muted-foreground">Team Limit</Label>
+                                        <div className="p-3 bg-muted rounded-md">
+                                            {selectedPackage.formatted_team_limit}
                                         </div>
                                     </div>
                                     <div className="space-y-2">
@@ -601,33 +627,56 @@ export default function AdminPackagesIndex({ packages, permissions }: Props) {
 
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="space-y-2">
-                                        <Label htmlFor="duration">Duration (years)</Label>
+                                        <Label htmlFor="duration">Duration</Label>
+                                        <Input
+                                            id="duration"
+                                            type="number"
+                                            min="1"
+                                            value={packageForm.duration}
+                                            onChange={(e) => setPackageForm(prev => ({ ...prev, duration: parseInt(e.target.value) || 1 }))}
+                                            placeholder="e.g., 1, 6, 12"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="type">Duration Type</Label>
                                         <Select
-                                            value={packageForm.duration.toString()}
-                                            onValueChange={(value) => setPackageForm(prev => ({ ...prev, duration: parseInt(value) }))}
+                                            value={packageForm.type}
+                                            onValueChange={(value: 'day' | 'month' | 'year') => setPackageForm(prev => ({ ...prev, type: value }))}
                                         >
-                                            <SelectTrigger  className='w-full'>
+                                            <SelectTrigger className='w-full'>
                                                 <SelectValue />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                {[1, 2, 3, 4, 5].map(year => (
-                                                    <SelectItem key={year} value={year.toString()}>
-                                                        {year} year{year > 1 ? 's' : ''}
-                                                    </SelectItem>
-                                                ))}
+                                                <SelectItem value="day">Day</SelectItem>
+                                                <SelectItem value="month">Month</SelectItem>
+                                                <SelectItem value="year">Year</SelectItem>
                                             </SelectContent>
                                         </Select>
                                     </div>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4">
                                     <div className="space-y-2">
-                                        <Label htmlFor="person">Persons Allowed</Label>
+                                        <Label htmlFor="member_limit">Member Limit</Label>
                                         <Input
-                                            id="person"
+                                            id="member_limit"
                                             type="number"
-                                            value={packageForm.person}
-                                            onChange={(e) => setPackageForm(prev => ({ ...prev, person: e.target.value }))}
+                                            value={packageForm.member_limit}
+                                            onChange={(e) => setPackageForm(prev => ({ ...prev, member_limit: e.target.value }))}
                                             placeholder="e.g., 5, 15, -1 for unlimited"
                                         />
-                                        <p className="text-xs text-muted-foreground">Use -1 for unlimited persons</p>
+                                        <p className="text-xs text-muted-foreground">Use -1 for unlimited</p>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="team_limit">Team Limit</Label>
+                                        <Input
+                                            id="team_limit"
+                                            type="number"
+                                            value={packageForm.team_limit}
+                                            onChange={(e) => setPackageForm(prev => ({ ...prev, team_limit: e.target.value }))}
+                                            placeholder="e.g., 1, 5, -1 for unlimited"
+                                        />
+                                        <p className="text-xs text-muted-foreground">Use -1 for unlimited</p>
                                     </div>
                                 </div>
 

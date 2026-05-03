@@ -2,6 +2,7 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\MpinController;
 use App\Http\Controllers\Api\TeamController;
@@ -13,6 +14,23 @@ Route::get('/test', function (Request $request) {
         'message'=>"API successfuly tested Latest ok."
     ]);
 });
+
+Route::get('/test-auth', function (Request $request) {
+    $user = Auth::guard('api')->user();
+    
+    return response()->json([
+        'status' => 'success',
+        'message' => 'Auth test',
+        'authenticated' => Auth::guard('api')->check(),
+        'user' => $user ? [
+            'id' => $user->id,
+            'name' => $user->name,
+            'email' => $user->email,
+        ] : null,
+        'token_present' => $request->bearerToken() ? 'yes' : 'no',
+        'token_preview' => $request->bearerToken() ? substr($request->bearerToken(), 0, 20) . '...' : null,
+    ]);
+})->middleware('api.auth');
 
 Route::get('/test-models', function () {
     try {
@@ -48,31 +66,36 @@ Route::post('/verify-otp', [App\Http\Controllers\Api\OtpController::class, 'veri
 Route::post('/password/forgot', [App\Http\Controllers\Api\PasswordResetController::class, 'createPasswordResetForEmail']);
 Route::post('/password/reset', [App\Http\Controllers\Api\PasswordResetController::class, 'resetPasswordWithToken']);
 
-Route::prefix('user')->middleware(['api.auth'])->group(function (): void {
+Route::prefix('member')->middleware(['api.auth'])->group(function (): void {
     Route::get('profile', [AuthController::class, 'profile']);
     Route::post('profile', [AuthController::class, 'profile']);
     Route::post('logout', [AuthController::class, 'logout']);
 
-    Route::prefix('teams')->group(function () {
-        Route::get('/my/{id?}', [TeamController::class, 'myTeams']);
-    });
-
     Route::prefix('mpin')->group(function () {
         Route::post('/', [MpinController::class, 'store']);
-        Route::put('/', [MpinController::class, 'update']);
         Route::delete('/', [MpinController::class, 'destroy']);
         Route::post('/verify', [MpinController::class, 'verify']);
+        Route::post('/update', [MpinController::class, 'update']);
     });
 
     // KYC Routes
     Route::prefix('kyc')->group(function () {
-        Route::get('/my', [App\Http\Controllers\Api\KycController::class, 'myKyc']);
+        Route::get('/', [App\Http\Controllers\Api\KycController::class, 'myKyc']);
         Route::post('/', [App\Http\Controllers\Api\KycController::class, 'store']);
         Route::put('/{kyc}', [App\Http\Controllers\Api\KycController::class, 'update']);
         Route::get('/{kyc}', [App\Http\Controllers\Api\KycController::class, 'show']);
         Route::delete('/{kyc}', [App\Http\Controllers\Api\KycController::class, 'destroy']);
     });
+
+    Route::get('/teams', [TeamController::class, 'memberTeams']);
+    Route::get('/teams/{teamId}', [TeamController::class, 'getTeamData']);
+    Route::get('/payment-banner', [App\Http\Controllers\Api\MemberPaymentController::class, 'getPaymentBanner']);
+    Route::get('/payment-methods', [App\Http\Controllers\Api\MemberPaymentController::class, 'getPaymentMethods']);
+    Route::post('/payment-initiate', [App\Http\Controllers\Api\MemberPaymentController::class, 'initiatePayment']);
+    Route::post('/payment-verify', [App\Http\Controllers\Api\MemberPaymentController::class, 'verifyPayment']);
+    Route::get('/transactions', [App\Http\Controllers\Api\MemberPaymentController::class, 'getTransactions']);
 });
+
 
 // Admin/Team Management Routes
 Route::prefix('admin')->middleware(['api.auth', 'role:admin|team'])->group(function () {

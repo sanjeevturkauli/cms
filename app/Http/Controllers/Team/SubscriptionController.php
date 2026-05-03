@@ -46,8 +46,8 @@ class SubscriptionController extends Controller
                         'days_remaining' => $subscription->days_remaining,
                         'is_active' => $subscription->is_active,
                         'features' => $subscription->package_features ?? [],
-                        'team_size_limit' => $subscription->package->person,
-                        'formatted_team_size_limit' => $subscription->package->formatted_person,
+                        'team_size_limit' => $subscription->package->member_limit,
+                        'formatted_team_size_limit' => $subscription->package->formatted_member_limit,
                     ] : null,
                 ];
             });
@@ -58,10 +58,13 @@ class SubscriptionController extends Controller
                 'name' => $package->name,
                 'price' => $package->price,
                 'formatted_price' => $package->formatted_price,
-                'person' => $package->person,
-                'formatted_person' => $package->formatted_person,
+                'member_limit' => $package->member_limit,
+                'team_limit' => $package->team_limit,
+                'formatted_member_limit' => $package->formatted_member_limit,
+                'formatted_team_limit' => $package->formatted_team_limit,
                 'features' => $package->features ?? [],
                 'duration' => $package->duration,
+                'type' => $package->type ?? 'month',
                 'duration_range' => $package->duration_range,
             ];
         });
@@ -95,6 +98,7 @@ class SubscriptionController extends Controller
             ],
             'paymentGateways' => $paymentGateways,
             'cancellationFee' => \App\Models\Setting::get('cancellation_fee', 500),
+            'platformFee' => (float) \App\Models\Setting::get('platform_fee', 0),
         ]);
     }
 
@@ -189,14 +193,22 @@ class SubscriptionController extends Controller
             $message = "Successfully subscribed to {$newPackage->name} package. Total: ₹" . number_format($totalAmount, 0);
             
             $startDate = Carbon::now();
-            $endDate = $startDate->copy()->addYears($newPackage->duration);
+            $type = $newPackage->type ?? 'month';
+            $endDate = match($type) {
+                'day'   => $startDate->copy()->addDays($newPackage->duration),
+                'year'  => $startDate->copy()->addYears($newPackage->duration),
+                default => $startDate->copy()->addMonths($newPackage->duration),
+            };
 
             $newSubscription = Subscription::create([
                 'team_id' => $team->id,
                 'package_id' => $newPackage->id,
+                'member_limit' => $newPackage->member_limit,
+                'team_limit' => $newPackage->team_limit,
                 'start_date' => $startDate,
                 'end_date' => $endDate,
-                'duration_years' => $newPackage->duration,
+                'duration' => $newPackage->duration,
+                'type' => $type,
                 'amount_paid' => $totalAmount,
                 'status' => 'active',
                 'package_features' => $newPackage->features,

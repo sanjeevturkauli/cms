@@ -1,9 +1,10 @@
 import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { NotificationBell } from "@/components/notification-bell"
-import { usePage } from "@inertiajs/react"
+import { usePage, Link } from "@inertiajs/react"
 import { Wallet } from "lucide-react"
 import { SharedData } from "@/types"
 
@@ -18,6 +19,9 @@ export function SiteHeader() {
 
   const activePage = component
   const wallet = props.wallet
+  const kycStatus = props.kycStatus
+
+  console.log('kycStatus',kycStatus)
 
   const role = props.auth?.user?.roles && props.auth.user.roles.length > 0 ? props.auth.user.roles[0].name : "";
 
@@ -37,9 +41,31 @@ export function SiteHeader() {
 
         <div className="ml-auto flex shrink-0 items-center gap-2">
           {wallet && (
-            <div className="flex items-center gap-1.5 px-2 py-1 bg-green-50 rounded-lg border border-green-200 max-w-[140px] sm:max-w-none">
+            <div className="flex items-center gap-1.5 px-2 py-1 bg-green-50 dark:bg-green-950 rounded-lg border border-green-200 dark:border-green-800 max-w-[140px] sm:max-w-none">
               <Wallet className="h-4 w-4 text-green-600 shrink-0" />
-              <span className="text-xs sm:text-sm font-semibold text-green-700 truncate">{wallet.balance}</span>
+              <span className="text-xs sm:text-sm font-semibold text-green-700 dark:text-green-400 truncate">{wallet.balance}</span>
+            </div>
+          )}
+          {kycStatus && (
+            <div className="hidden sm:block">
+              {(() => {
+                const s = kycStatus.status;
+                const colorClass =
+                  s === 'approved' ? 'border-green-500 text-green-600 dark:text-green-400 bg-green-500/10' :
+                  s === 'submitted' ? 'border-blue-500 text-blue-600 dark:text-blue-400 bg-blue-500/10' :
+                  s === 'rejected'  ? 'border-red-500 text-red-600 dark:text-red-400 bg-red-500/10' :
+                                     'border-yellow-500 text-yellow-600 dark:text-yellow-400 bg-yellow-500/10';
+
+                const badge = (
+                  <Badge variant="outline" className={`text-xs font-medium cursor-pointer hover:opacity-80 ${colorClass}`}>
+                    {kycStatus.text}
+                  </Badge>
+                );
+
+                return kycStatus.clickable && kycStatus.url
+                  ? <Link href={kycStatus.url}>{badge}</Link>
+                  : badge;
+              })()}
             </div>
           )}
           <NotificationBell />

@@ -426,6 +426,32 @@ class AuthController extends Controller
 
     protected function formatUser(User $user): array
     {
+        // Get KYC status
+        $kyc = $user->kyc;
+        $kycStatus = $kyc ? $kyc->status : 'not_submitted';
+        
+        // Determine KYC message based on status
+        $kycMessage = match($kycStatus) {
+            'pending' => 'KYC Verification Required - Please complete your KYC verification to access all features and ensure account security.',
+            'submitted' => 'KYC Under Review - Your KYC documents are being reviewed. You will be notified once approved.',
+            'approved' => 'KYC Verified - Your account is fully verified.',
+            'rejected' => 'KYC Rejected - Your KYC was rejected. Please resubmit with correct information.',
+            default => 'KYC Verification Required - Please complete your KYC verification to access all features and ensure account security.',
+        };
+        
+        // Calculate KYC completion percentage
+        $kycCompletionPercentage = 0;
+        if ($kyc) {
+            $fields = ['full_name', 'date_of_birth', 'address', 'city', 'state', 'country', 'pincode', 'id_type', 'id_number', 'id_front_image', 'id_back_image'];
+            $filledFields = 0;
+            foreach ($fields as $field) {
+                if (!empty($kyc->$field)) {
+                    $filledFields++;
+                }
+            }
+            $kycCompletionPercentage = round(($filledFields / count($fields)) * 100);
+        }
+        
         return [
             'id' => $user->id,
             'name' => $user->name,
@@ -437,6 +463,9 @@ class AuthController extends Controller
             'created_at' => $user->created_at?->toIso8601String(),
             'updated_at' => $user->updated_at?->toIso8601String(),
             'profile_photo' => $user->profile_photo_path ? asset($user->profile_photo_path) : null,
+            'kyc_status' => $kycStatus,
+            'kyc_message' => $kycMessage,
+            'kyc_completion_percentage' => $kycCompletionPercentage,
         ];
     }
 }

@@ -13,9 +13,12 @@ class Subscription extends Model
     protected $fillable = [
         'team_id',
         'package_id',
+        'member_limit',
+        'team_limit',
         'start_date',
         'end_date',
-        'duration_years',
+        'duration',
+        'type',
         'amount_paid',
         'status',
         'package_features',
@@ -25,7 +28,9 @@ class Subscription extends Model
         'start_date' => 'date',
         'end_date' => 'date',
         'amount_paid' => 'decimal:2',
-        'duration_years' => 'integer',
+        'duration' => 'integer',
+        'member_limit' => 'integer',
+        'team_limit' => 'integer',
         'package_features' => 'array',
     ];
 

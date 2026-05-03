@@ -13,6 +13,7 @@ class TeamInfoController extends Controller
 {
     public function show($encryptedTeamId)
     {
+        
         try {
             // Decrypt the team ID
             $teamId = decrypt($encryptedTeamId);
@@ -34,6 +35,9 @@ class TeamInfoController extends Controller
         // Get or create team info
         $teamInfo = $team->teamInfo ?: new TeamInfo(['team_id' => $team->id]);
 
+        // Get real member count from members table
+        $actualMemberCount = $team->members()->count();
+
         return Inertia::render('teams/info', [
             'team' => [
                 'id' => $team->id,
@@ -42,17 +46,18 @@ class TeamInfoController extends Controller
                 'status' => $team->status,
                 'is_active' => $team->is_active,
                 'created_at' => $team->created_at->format('M d, Y'),
-                'encrypted_id' => $encryptedTeamId, // Pass encrypted ID to frontend
+                'updated_at' => $team->updated_at->format('M d, Y H:i'),
+                'encrypted_id' => $encryptedTeamId,
             ],
             'teamInfo' => [
                 'id' => $teamInfo->id ?? null,
-                'plan' => $teamInfo->plan,
-                'duration_months' => $teamInfo->duration_months,
-                'plan_start_date' => $teamInfo->plan_start_date?->format('Y-m-d'),
-                'plan_end_date' => $teamInfo->plan_end_date?->format('Y-m-d'),
-                'total_member_limit' => $teamInfo->total_member_limit,
-                'current_members' => $teamInfo->current_members,
+                'plan' => $teamInfo->plan ?? null,
+                'duration_months' => $teamInfo->duration_months ?? null,
+                'plan_start_date' => $teamInfo->plan_start_date ?? null,
+                'plan_end_date' => $teamInfo->plan_end_date ?? null,
+                'current_members' => $actualMemberCount,
                 'monthly_amount' => $teamInfo->monthly_amount,
+                'duration' => $teamInfo->duration,
                 'total_amount' => $teamInfo->total_amount,
                 'paid_members' => $teamInfo->paid_members,
                 'latitude' => $teamInfo->latitude,
@@ -159,23 +164,18 @@ class TeamInfoController extends Controller
         }
 
         $request->validate([
-            'plan' => ['nullable', 'string', 'max:100'],
-            'duration_months' => ['nullable', 'integer', 'min:1', 'max:120'],
-            'plan_start_date' => ['nullable', 'date'],
-            'plan_end_date' => ['nullable', 'date', 'after:plan_start_date'],
-            'total_member_limit' => ['nullable', 'integer', 'min:1', 'max:1000'],
             'monthly_amount' => ['nullable', 'numeric', 'min:0'],
+            'duration' => ['nullable', 'integer', 'min:1'],
             'total_amount' => ['nullable', 'numeric', 'min:0'],
         ]);
 
         $teamInfo = $team->teamInfo ?: $team->teamInfo()->create(['team_id' => $team->id]);
         
         $teamInfo->update($request->only([
-            'plan', 'duration_months', 'plan_start_date', 'plan_end_date',
-            'total_member_limit', 'monthly_amount', 'total_amount'
+            'monthly_amount', 'duration', 'total_amount'
         ]));
 
-        return redirect()->back()->with('success', 'Plan information updated successfully.');
+        return redirect()->back()->with('success', 'Financial information updated successfully.');
     }
 
     public function updateSettings(Request $request, $encryptedTeamId)

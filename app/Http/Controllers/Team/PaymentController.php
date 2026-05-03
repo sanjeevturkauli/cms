@@ -3,12 +3,14 @@
 namespace App\Http\Controllers\Team;
 
 use App\Http\Controllers\Controller;
+use App\Models\ActivityLog;
 use App\Models\Package;
 use App\Models\PaymentTransaction;
 use App\Models\Setting;
 use App\Models\Subscription;
 use App\Models\SubscriptionLog;
 use App\Models\Team;
+use App\Models\Transaction;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -45,7 +47,8 @@ class PaymentController extends Controller
             return redirect()->back()->with('error', 'Selected payment gateway is not enabled. Please contact admin.');
         }
 
-        $amount = $package->price * $package->duration;
+        $platformFee = (float) Setting::get('platform_fee', 0);
+        $amount = ($package->price * $package->duration) + $platformFee;
 
         $transaction = PaymentTransaction::create([
             'user_id' => $user->id,
@@ -55,9 +58,10 @@ class PaymentController extends Controller
             'payment_gateway' => $request->payment_gateway,
             'amount' => $amount,
             'currency' => 'INR',
+            'gateway_fee' => $platformFee,
             'net_amount' => $amount,
             'status' => 'pending',
-            'description' => "Subscription to {$package->name} package for team {$team->name}",
+            'description' => "Subscription to {$package->name} package for team {$team->name}" . ($platformFee > 0 ? " (includes ₹{$platformFee} platform fee)" : ''),
             'customer_email' => $user->email,
             'customer_phone' => $user->mobile ?? null,
         ]);
@@ -376,14 +380,22 @@ class PaymentController extends Controller
         }
 
         $startDate = Carbon::now();
-        $endDate = $startDate->copy()->addYears($package->duration);
+        $type = $package->type ?? 'month';
+        $endDate = match($type) {
+            'day'   => $startDate->copy()->addDays($package->duration),
+            'year'  => $startDate->copy()->addYears($package->duration),
+            default => $startDate->copy()->addMonths($package->duration),
+        };
 
         $subscription = Subscription::create([
             'team_id' => $team->id,
             'package_id' => $package->id,
+            'member_limit' => $package->member_limit,
+            'team_limit' => $package->team_limit,
             'start_date' => $startDate,
             'end_date' => $endDate,
-            'duration_years' => $package->duration,
+            'duration' => $package->duration,
+            'type' => $type,
             'amount_paid' => $transaction->amount,
             'status' => 'active',
             'package_features' => $package->features,
@@ -412,6 +424,65 @@ class PaymentController extends Controller
             'days_remaining' => 365 * $package->duration,
             'description' => "Subscribed to {$package->name} package via {$transaction->payment_gateway}",
         ]);
+
+        // Credit full payment amount to admin wallet with separate activity logs
+        $platformFee = (float) \App\Models\Setting::get('platform_fee', 0);
+        $packageAmount = $transaction->amount - $platformFee; // e.g. ₹1,000
+        $totalAmount = $transaction->amount; // e.g. ₹1,200
+
+        $adminUser = \App\Models\User::role('admin')->first();
+        if ($adminUser && $adminUser->wallet) {
+            $balanceBefore = (float) $adminUser->wallet->balance;
+            $balanceAfterPackage = $balanceBefore + $packageAmount;
+            $balanceAfterTotal = $balanceBefore + $totalAmount;
+
+            // Credit full amount to admin wallet
+            $adminUser->wallet->increment('balance', $totalAmount);
+
+            // Activity log 1: Package amount credit
+            Transaction::create([
+                'user_id' => $adminUser->id,
+                'wallet_id' => $adminUser->wallet->id,
+                'type' => 'credit',
+                'amount' => $packageAmount,
+                'description' => "Package payment: {$package->name} from {$team->name} via {$transaction->payment_gateway}",
+                'reference_type' => 'subscription',
+                'reference_id' => $subscription->id,
+                'balance_before' => $balanceBefore,
+                'balance_after' => $balanceAfterPackage,
+            ]);
+
+            // Activity log 2: Platform fee credit (only if platform fee > 0)
+            if ($platformFee > 0) {
+                Transaction::create([
+                    'user_id' => $adminUser->id,
+                    'wallet_id' => $adminUser->wallet->id,
+                    'type' => 'credit',
+                    'amount' => $platformFee,
+                    'description' => "Platform fee: {$package->name} subscription from {$team->name}",
+                    'reference_type' => 'platform_fee',
+                    'reference_id' => $subscription->id,
+                    'balance_before' => $balanceAfterPackage,
+                    'balance_after' => $balanceAfterTotal,
+                ]);
+            }
+
+            // Activity log for subscription event
+            ActivityLog::log('subscription')
+                ->performedOn($subscription)
+                ->causedBy($user)
+                ->event('purchased')
+                ->withProperties([
+                    'package' => $package->name,
+                    'team' => $team->name,
+                    'package_amount' => $packageAmount,
+                    'platform_fee' => $platformFee,
+                    'total_amount' => $totalAmount,
+                    'payment_gateway' => $transaction->payment_gateway,
+                    'transaction_id' => $transaction->transaction_id,
+                ])
+                ->log("Subscription purchased: {$package->name} by {$team->name} - Total: ₹{$totalAmount} (Package: ₹{$packageAmount} + Platform Fee: ₹{$platformFee})");
+        }
 
         return $subscription;
     }

@@ -41,13 +41,16 @@ export function TeamSwitcher({
   const { props } = usePage<SharedData>()
   const currentTeamId = props.currentTeamId
 
+  // Ensure teams is always an array
+  const teamsArray = Array.isArray(teams) ? teams : []
+
   // Find active team based on currentTeamId or default to first team
   const activeTeam = React.useMemo(() => {
     if (currentTeamId) {
-      return teams.find(t => t.id === currentTeamId) || teams[0]
+      return teamsArray.find(t => t.id === currentTeamId) || teamsArray[0]
     }
-    return teams[0]
-  }, [currentTeamId, teams])
+    return teamsArray[0]
+  }, [currentTeamId, teamsArray])
 
   const handleSwitchTeam = (team: Team) => {
     if (team.id === activeTeam?.id) return
@@ -65,7 +68,7 @@ export function TeamSwitcher({
     // For members, the JoinTeamDialog will handle the join functionality
   }
 
-  if (!activeTeam && teams.length === 0) {
+  if (!activeTeam && teamsArray.length === 0) {
     return (
       <SidebarMenu>
         <SidebarMenuItem>
@@ -132,7 +135,7 @@ export function TeamSwitcher({
             <DropdownMenuLabel className="text-muted-foreground text-xs">
               Teams
             </DropdownMenuLabel>
-            {teams.map((team, index) => (
+            {teamsArray.map((team, index) => (
               <DropdownMenuItem
                 key={team.id}
                 onClick={() => handleSwitchTeam(team)}

@@ -113,8 +113,9 @@ class TransactionController extends Controller
                 'package' => $transaction->package ? [
                     'name' => $transaction->package->name,
                     'price' => $transaction->package->formatted_price,
-                    'duration' => $transaction->package->duration . ' year(s)',
-                    'person' => $transaction->package->formatted_person,
+                    'duration' => $transaction->package->duration_range,
+                    'member_limit' => $transaction->package->formatted_member_limit,
+                    'team_limit' => $transaction->package->formatted_team_limit,
                     'features' => $transaction->package->features,
                 ] : null,
 

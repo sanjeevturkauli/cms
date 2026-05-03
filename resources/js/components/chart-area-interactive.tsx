@@ -140,39 +140,57 @@ const chartConfig = {
   },
 } satisfies ChartConfig
 
-export function ChartAreaInteractive() {
+export function ChartAreaInteractive({ chartData: externalData }: { chartData?: any[] }) {
   const isMobile = useIsMobile()
-  const [timeRange, setTimeRange] = React.useState("90d")
+  const [timeRange, setTimeRange] = React.useState("3m")
 
   React.useEffect(() => {
     if (isMobile) {
-      setTimeRange("7d")
+      setTimeRange("3m")
     }
   }, [isMobile])
 
-  const filteredData = chartData.filter((item) => {
+  // Use real data if provided, otherwise fall back to static data
+  const sourceData = externalData && externalData.length > 0 ? externalData : chartData
+
+  const filteredData = sourceData.filter((item) => {
     const date = new Date(item.date)
-    const referenceDate = new Date("2024-06-30")
+    const referenceDate = new Date() // always use today
     let daysToSubtract = 90
-    if (timeRange === "30d") {
-      daysToSubtract = 30
-    } else if (timeRange === "7d") {
-      daysToSubtract = 7
+    if (timeRange === "1y") {
+      daysToSubtract = 365
+    } else if (timeRange === "6m") {
+      daysToSubtract = 180
+    } else if (timeRange === "3m") {
+      daysToSubtract = 90
     }
     const startDate = new Date(referenceDate)
     startDate.setDate(startDate.getDate() - daysToSubtract)
     return date >= startDate
   })
 
+  // Check if we're using real revenue data
+  const isRealData = externalData && externalData.length > 0 && 'revenue' in (externalData[0] || {})
+
   return (
     <Card className="@container/card">
       <CardHeader>
-        <CardTitle>Total Visitors</CardTitle>
+        <CardTitle>{isRealData ? 'Revenue Overview' : 'Total Visitors'}</CardTitle>
         <CardDescription>
           <span className="hidden @[540px]/card:block">
-            Total for the last 3 months
+            {isRealData
+              ? timeRange === "3m" ? 'Last 3 months revenue'
+                : timeRange === "6m" ? 'Last 6 months revenue'
+                : 'Last 1 year revenue'
+              : 'Total for the last 3 months'}
           </span>
-          <span className="@[540px]/card:hidden">Last 3 months</span>
+          <span className="@[540px]/card:hidden">
+            {isRealData
+              ? timeRange === "3m" ? 'Last 3 months'
+                : timeRange === "6m" ? 'Last 6 months'
+                : 'Last 1 year'
+              : 'Last 3 months'}
+          </span>
         </CardDescription>
         <CardAction>
           <ToggleGroup
@@ -182,9 +200,9 @@ export function ChartAreaInteractive() {
             variant="outline"
             className="hidden *:data-[slot=toggle-group-item]:!px-4 @[767px]/card:flex"
           >
-            <ToggleGroupItem value="90d">Last 3 months</ToggleGroupItem>
-            <ToggleGroupItem value="30d">Last 30 days</ToggleGroupItem>
-            <ToggleGroupItem value="7d">Last 7 days</ToggleGroupItem>
+            <ToggleGroupItem value="1y">Last 1 year</ToggleGroupItem>
+            <ToggleGroupItem value="6m">Last 6 months</ToggleGroupItem>
+            <ToggleGroupItem value="3m">Last 3 months</ToggleGroupItem>
           </ToggleGroup>
           <Select value={timeRange} onValueChange={setTimeRange}>
             <SelectTrigger
@@ -195,14 +213,14 @@ export function ChartAreaInteractive() {
               <SelectValue placeholder="Last 3 months" />
             </SelectTrigger>
             <SelectContent className="rounded-xl">
-              <SelectItem value="90d" className="rounded-lg">
+              <SelectItem value="1y" className="rounded-lg">
+                Last 1 year
+              </SelectItem>
+              <SelectItem value="6m" className="rounded-lg">
+                Last 6 months
+              </SelectItem>
+              <SelectItem value="3m" className="rounded-lg">
                 Last 3 months
-              </SelectItem>
-              <SelectItem value="30d" className="rounded-lg">
-                Last 30 days
-              </SelectItem>
-              <SelectItem value="7d" className="rounded-lg">
-                Last 7 days
               </SelectItem>
             </SelectContent>
           </Select>
@@ -242,12 +260,13 @@ export function ChartAreaInteractive() {
             </defs>
             <CartesianGrid vertical={false} />
             <XAxis
-              dataKey="date"
+              dataKey={isRealData ? "month" : "date"}
               tickLine={false}
               axisLine={false}
               tickMargin={8}
               minTickGap={32}
               tickFormatter={(value) => {
+                if (isRealData) return value; // month is already formatted "May 2026"
                 const date = new Date(value)
                 return date.toLocaleDateString("en-US", {
                   month: "short",
@@ -260,29 +279,47 @@ export function ChartAreaInteractive() {
               content={
                 <ChartTooltipContent
                   labelFormatter={(value) => {
+                    if (isRealData) return value;
                     return new Date(value).toLocaleDateString("en-US", {
                       month: "short",
                       day: "numeric",
                     })
                   }}
+                  formatter={(value, name) => {
+                    if (isRealData && name === 'revenue') {
+                      return [`₹${Number(value).toLocaleString('en-IN')}`, 'Revenue'];
+                    }
+                    return [value, name];
+                  }}
                   indicator="dot"
                 />
               }
             />
-            <Area
-              dataKey="mobile"
-              type="natural"
-              fill="url(#fillMobile)"
-              stroke="var(--color-mobile)"
-              stackId="a"
-            />
-            <Area
-              dataKey="desktop"
-              type="natural"
-              fill="url(#fillDesktop)"
-              stroke="var(--color-desktop)"
-              stackId="a"
-            />
+            {isRealData ? (
+              <Area
+                dataKey="revenue"
+                type="monotone"
+                fill="url(#fillDesktop)"
+                stroke="var(--color-desktop)"
+              />
+            ) : (
+              <>
+                <Area
+                  dataKey="mobile"
+                  type="natural"
+                  fill="url(#fillMobile)"
+                  stroke="var(--color-mobile)"
+                  stackId="a"
+                />
+                <Area
+                  dataKey="desktop"
+                  type="natural"
+                  fill="url(#fillDesktop)"
+                  stroke="var(--color-desktop)"
+                  stackId="a"
+                />
+              </>
+            )}
           </AreaChart>
         </ChartContainer>
       </CardContent>

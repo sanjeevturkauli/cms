@@ -41,6 +41,7 @@ class HandleInertiaRequests extends Middleware
         $teams = [];
         $isTeamOwner = false;
         $wallet = null;
+        $kycStatus = null;
 
         if ($request->user()) {
             $user = $request->user();
@@ -54,6 +55,11 @@ class HandleInertiaRequests extends Middleware
                 'balance' => $user->wallet->formatted_balance,
                 'raw_balance' => $user->wallet->balance,
             ];
+
+            // Get KYC status for header (only for team and member users)
+            if ($user->hasRole('team') || $user->hasRole('member')) {
+                $kycStatus = $user->getKycStatusForHeader();
+            }
 
             // Check if user is a team owner
             $isTeamOwner = \App\Models\Team::where('user_id', $user->id)->exists();
@@ -71,8 +77,10 @@ class HandleInertiaRequests extends Middleware
                         ];
                     })
                     ->toArray();
-            } else {
+            } else if ($user->hasRole('member')) {
+                // Get teams where user is a member - always fresh query
                 $teams = \App\Models\Member::where('user_id', $user->id)
+                    ->whereHas('team') // ensure team exists
                     ->with('team')
                     ->get()
                     ->map(function ($member) {
@@ -82,7 +90,13 @@ class HandleInertiaRequests extends Middleware
                             'team_id' => $member->team->team_id,
                         ];
                     })
+                    ->values()
                     ->toArray();
+            }
+
+            // Auto-set currentTeamId if not set
+            if (!$request->session()->get('current_team_id') && !empty($teams)) {
+                $request->session()->put('current_team_id', $teams[0]['id']);
             }
         }
 
@@ -94,7 +108,7 @@ class HandleInertiaRequests extends Middleware
                 'user' => $request->user()?->load('roles', 'permissions'),
             ],
             'routeName' => request()->route()?->getName(),
-            'teams' => $request->user() ? ($isTeamOwner || $request->user()->hasRole('member')) ? $teams : [] : [],
+            'teams' => $request->user() ? $teams : [],
             'isTeamOwner' => $isTeamOwner,
 
             'isAdmin' => $request->user() ? $request->user()->hasRole('admin') : false,
@@ -102,6 +116,7 @@ class HandleInertiaRequests extends Middleware
 
             'currentTeamId' => $request->session()->get('current_team_id'),
             'wallet' => $wallet,
+            'kycStatus' => $kycStatus,
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
             'notificationCount' => $request->user() ? \App\Services\NotificationService::getUnreadCount($request->user()->id) : 0,
             'siteSettings' => [

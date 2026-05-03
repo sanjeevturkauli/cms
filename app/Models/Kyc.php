@@ -83,7 +83,8 @@ class Kyc extends Model
 
     public function approve($adminId, $reason = null): bool
     {
-        return $this->update([
+        $oldStatus = $this->status;
+        $result = $this->update([
             'status' => 'approved',
             'approved_by' => $adminId,
             'approved_date' => Carbon::now(),
@@ -93,22 +94,56 @@ class Kyc extends Model
             'pan_verified' => true,
             'address_verified' => true,
         ]);
+
+        if ($result) {
+            ActivityLog::log('kyc')
+                ->performedOn($this)
+                ->causedBy(\App\Models\User::find($adminId))
+                ->event('approved')
+                ->withProperties([
+                    'old_status' => $oldStatus,
+                    'new_status' => 'approved',
+                    'reason' => $reason,
+                    'admin_id' => $adminId,
+                ])
+                ->log("KYC application approved by admin");
+        }
+
+        return $result;
     }
 
     public function reject($adminId, $reason): bool
     {
-        return $this->update([
+        $oldStatus = $this->status;
+        $result = $this->update([
             'status' => 'rejected',
             'approved_by' => $adminId,
             'approved_date' => Carbon::now(),
             'reason' => $reason,
         ]);
+
+        if ($result) {
+            ActivityLog::log('kyc')
+                ->performedOn($this)
+                ->causedBy(\App\Models\User::find($adminId))
+                ->event('rejected')
+                ->withProperties([
+                    'old_status' => $oldStatus,
+                    'new_status' => 'rejected',
+                    'reason' => $reason,
+                    'admin_id' => $adminId,
+                ])
+                ->log("KYC application rejected by admin: {$reason}");
+        }
+
+        return $result;
     }
 
     public function getStatusBadgeAttribute(): array
     {
         return match ($this->status) {
-            'pending' => ['class' => 'bg-yellow-100 text-yellow-800', 'text' => 'Pending'],
+            'pending' => ['class' => 'bg-gray-100 text-gray-800', 'text' => 'Pending'],
+            'submitted' => ['class' => 'bg-blue-100 text-blue-800', 'text' => 'Submitted'],
             'approved' => ['class' => 'bg-green-100 text-green-800', 'text' => 'Approved'],
             'rejected' => ['class' => 'bg-red-100 text-red-800', 'text' => 'Rejected'],
             default => ['class' => 'bg-gray-100 text-gray-800', 'text' => 'Unknown'],
@@ -161,10 +196,27 @@ class Kyc extends Model
 
     public function submit(): bool
     {
-        return $this->update([
+        $oldStatus = $this->status;
+        $result = $this->update([
+            'status' => 'submitted',
             'submitted_at' => Carbon::now(),
             'is_complete' => $this->checkCompleteness(),
         ]);
+
+        if ($result) {
+            ActivityLog::log('kyc')
+                ->performedOn($this)
+                ->causedBy($this->user)
+                ->event('submitted')
+                ->withProperties([
+                    'old_status' => $oldStatus,
+                    'new_status' => 'submitted',
+                    'completion_percentage' => $this->completion_percentage,
+                ])
+                ->log("KYC application submitted by user");
+        }
+
+        return $result;
     }
 
     private function checkCompleteness(): bool

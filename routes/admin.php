@@ -66,4 +66,27 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/', [\App\Http\Controllers\Admin\TransactionController::class, 'index'])->middleware('role:admin')->name('index');
         Route::get('/{transaction}', [\App\Http\Controllers\Admin\TransactionController::class, 'show'])->middleware('role:admin')->name('show');
     });
+
+    // KYC Management Routes
+    Route::prefix('kyc')->name('kyc.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Admin\KycController::class, 'index'])->name('index');
+        Route::get('/{kyc}', [\App\Http\Controllers\Admin\KycController::class, 'show'])->name('show');
+        Route::patch('/{kyc}/approve', [\App\Http\Controllers\Admin\KycController::class, 'approve'])->name('approve');
+        Route::patch('/{kyc}/reject', [\App\Http\Controllers\Admin\KycController::class, 'reject'])->name('reject');
+    });
+
+    // Activity Logs Routes
+    Route::prefix('activity-logs')->name('activity-logs.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Admin\ActivityLogController::class, 'index'])->name('index');
+    });
+
+    // Notification Routes
+    Route::prefix('notifications')->name('notifications.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Admin\NotificationController::class, 'index'])->name('index');
+        Route::get('/unread-count', [\App\Http\Controllers\Admin\NotificationController::class, 'getUnreadCount'])->name('unread-count');
+        Route::get('/recent', [\App\Http\Controllers\Admin\NotificationController::class, 'getRecent'])->name('recent');
+        Route::patch('/{notification}/read', [\App\Http\Controllers\Admin\NotificationController::class, 'markAsRead'])->name('mark-read');
+        Route::patch('/mark-all-read', [\App\Http\Controllers\Admin\NotificationController::class, 'markAllAsRead'])->name('mark-all-read');
+        Route::delete('/{notification}', [\App\Http\Controllers\Admin\NotificationController::class, 'destroy'])->name('destroy');
+    });
 });

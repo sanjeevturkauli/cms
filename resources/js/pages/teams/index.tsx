@@ -59,6 +59,10 @@ interface Props {
     isTeamOwner: boolean;
     canManageTeams: boolean;
     userRoles: string[];
+    kycApproved: boolean;
+    kycStatusValue: string;
+    teamLimitReached: boolean;
+    teamLimit: number;
     permissions: {
         canDeleteTeams: boolean;
         canEditTeams: boolean;
@@ -67,7 +71,7 @@ interface Props {
     };
 }
 
-export default function TeamsIndex({ teams, isTeamOwner, permissions }: Props) {
+export default function TeamsIndex({ teams, isTeamOwner, permissions, kycApproved, kycStatusValue, teamLimitReached, teamLimit }: Props) {
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [copiedTeamId, setCopiedTeamId] = useState<number | null>(null);
     const [isRefreshing, setIsRefreshing] = useState(false);
@@ -104,9 +108,31 @@ export default function TeamsIndex({ teams, isTeamOwner, permissions }: Props) {
     });
 
     const handleCopyTeamCode = (teamCode: string, teamId: number) => {
-        navigator.clipboard.writeText(teamCode);
-        setCopiedTeamId(teamId);
-        setTimeout(() => setCopiedTeamId(null), 2000);
+        // navigator.clipboard requires HTTPS - use fallback for HTTP
+        if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(teamCode).then(() => {
+                setCopiedTeamId(teamId);
+                setTimeout(() => setCopiedTeamId(null), 2000);
+            });
+        } else {
+            // Fallback for HTTP (non-secure context)
+            const textArea = document.createElement('textarea');
+            textArea.value = teamCode;
+            textArea.style.position = 'fixed';
+            textArea.style.left = '-9999px';
+            textArea.style.top = '-9999px';
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            try {
+                document.execCommand('copy');
+                setCopiedTeamId(teamId);
+                setTimeout(() => setCopiedTeamId(null), 2000);
+            } catch (err) {
+                console.error('Copy failed:', err);
+            }
+            document.body.removeChild(textArea);
+        }
     };
 
     const handleCreateTeam = (e: React.FormEvent) => {
@@ -163,13 +189,9 @@ export default function TeamsIndex({ teams, isTeamOwner, permissions }: Props) {
                         <div className="flex flex-col gap-4 px-4 py-4 md:gap-6 md:py-6 lg:px-6">
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <h1 className="text-3xl font-bold">
-                                        Teams
-                                    </h1>
+                                    <h1 className="text-3xl font-bold">Teams</h1>
                                     <p className="text-muted-foreground">
-                                        {isTeamOwner
-                                            ? 'Manage your teams'
-                                            : 'Your team memberships'}
+                                        {isTeamOwner ? 'Manage your teams' : 'Your team memberships'}
                                     </p>
                                 </div>
 
@@ -192,7 +214,17 @@ export default function TeamsIndex({ teams, isTeamOwner, permissions }: Props) {
                                         onOpenChange={setIsDialogOpen}
                                     >
                                         <DialogTrigger asChild>
-                                            <Button className="cursor-pointer">
+                                            <Button
+                                                className="cursor-pointer"
+                                                disabled={!kycApproved || teamLimitReached}
+                                                title={
+                                                    !kycApproved
+                                                        ? 'KYC verification required to create a team'
+                                                        : teamLimitReached
+                                                        ? `Team limit reached (${teamLimit} teams max). Upgrade your subscription.`
+                                                        : ''
+                                                }
+                                            >
                                                 <Plus className="h-4 w-4" />
                                                 Create New Team
                                             </Button>
@@ -226,9 +258,14 @@ export default function TeamsIndex({ teams, isTeamOwner, permissions }: Props) {
                                                         required
                                                     />
                                                     {createErrors.name && (
-                                                        <p className="text-sm text-red-500">
+                                                        <p className="text-sm text-destructive mt-1">
                                                             {createErrors.name}
                                                         </p>
+                                                    )}
+                                                    {(createErrors as any).kyc && (
+                                                        <div className="flex items-start gap-2 mt-2 p-3 rounded-md bg-destructive/10 border border-destructive/20">
+                                                            <span className="text-destructive text-sm font-medium">⚠ {(createErrors as any).kyc}</span>
+                                                        </div>
                                                     )}
                                                 </div>
                                             </div>

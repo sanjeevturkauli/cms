@@ -25,8 +25,11 @@ export default defineConfig({
         jsx: 'automatic',
     },
     server: {
+        host: '192.168.43.200',
+        port: 5173,
         hmr: {
             overlay: false,
+            host: '192.168.43.200',
         },
     },
 });

@@ -18,10 +18,13 @@ class PackageController extends Controller
                 'name' => $package->name,
                 'price' => $package->price,
                 'formatted_price' => $package->formatted_price,
-                'person' => $package->person,
-                'formatted_person' => $package->formatted_person,
+                'member_limit' => $package->member_limit,
+                'team_limit' => $package->team_limit,
+                'formatted_member_limit' => $package->formatted_member_limit,
+                'formatted_team_limit' => $package->formatted_team_limit,
                 'features' => $package->features ?? [],
                 'duration' => $package->duration,
+                'type' => $package->type ?? 'month',
                 'duration_range' => $package->duration_range,
                 'is_active' => $package->is_active,
                 'created_at' => $package->created_at->format('M d, Y'),
@@ -51,18 +54,22 @@ class PackageController extends Controller
         $request->validate([
             'name' => ['required', 'string', 'max:255', 'unique:packages,name'],
             'price' => ['required', 'numeric', 'min:0'],
-            'person' => ['required', 'integer', 'min:-1'],
+            'member_limit' => ['required', 'integer', 'min:-1'],
+            'team_limit' => ['required', 'integer', 'min:-1'],
             'features' => ['array'],
             'features.*' => ['string', 'max:255'],
-            'duration' => ['required', 'integer', 'min:1', 'max:10'],
+            'duration' => ['required', 'integer', 'min:1'],
+            'type' => ['required', 'in:day,month,year'],
         ]);
 
         $package = Package::create([
             'name' => $request->name,
             'price' => $request->price,
-            'person' => $request->person,
+            'member_limit' => $request->member_limit,
+            'team_limit' => $request->team_limit,
             'features' => $request->features ?? [],
             'duration' => $request->duration,
+            'type' => $request->type,
             'is_active' => true,
         ]);
 
@@ -80,19 +87,23 @@ class PackageController extends Controller
         $request->validate([
             'name' => ['required', 'string', 'max:255', 'unique:packages,name,' . $package->id],
             'price' => ['required', 'numeric', 'min:0'],
-            'person' => ['required', 'integer', 'min:-1'],
+            'member_limit' => ['required', 'integer', 'min:-1'],
+            'team_limit' => ['required', 'integer', 'min:-1'],
             'features' => ['array'],
             'features.*' => ['string', 'max:255'],
-            'duration' => ['required', 'integer', 'min:1', 'max:10'],
+            'duration' => ['required', 'integer', 'min:1'],
+            'type' => ['required', 'in:day,month,year'],
             'is_active' => ['boolean'],
         ]);
 
         $package->update([
             'name' => $request->name,
             'price' => $request->price,
-            'person' => $request->person,
+            'member_limit' => $request->member_limit,
+            'team_limit' => $request->team_limit,
             'features' => $request->features ?? [],
             'duration' => $request->duration,
+            'type' => $request->type,
             'is_active' => $request->is_active ?? $package->is_active,
         ]);
 

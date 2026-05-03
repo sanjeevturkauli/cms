@@ -12,9 +12,11 @@ class Package extends Model
     protected $fillable = [
         'name',
         'price',
-        'person',
+        'member_limit',
+        'team_limit',
         'features',
         'duration',
+        'type',
         'is_active',
     ];
 
@@ -23,7 +25,8 @@ class Package extends Model
         'price' => 'decimal:2',
         'is_active' => 'boolean',
         'duration' => 'integer',
-        'person' => 'integer',
+        'member_limit' => 'integer',
+        'team_limit' => 'integer',
     ];
 
     public function scopeActive($query)
@@ -38,15 +41,29 @@ class Package extends Model
 
     public function getDurationRangeAttribute()
     {
-        return $this->duration . ' year' . ($this->duration > 1 ? 's' : '');
+        $type = $this->type ?? 'month';
+        return $this->duration . ' ' . $type . ($this->duration > 1 ? 's' : '');
     }
 
-    public function getFormattedPersonAttribute()
+    public function getFormattedMemberLimitAttribute()
     {
-        if ($this->person === -1 || $this->person >= 999) {
+        if ($this->member_limit === -1 || $this->member_limit >= 999) {
             return 'Unlimited';
         }
-        
-        return $this->person . ' person' . ($this->person > 1 ? 's' : '');
+        return $this->member_limit . ' member' . ($this->member_limit > 1 ? 's' : '');
+    }
+
+    public function getFormattedTeamLimitAttribute()
+    {
+        if ($this->team_limit === -1 || $this->team_limit >= 999) {
+            return 'Unlimited';
+        }
+        return $this->team_limit . ' team' . ($this->team_limit > 1 ? 's' : '');
+    }
+
+    // Keep backward compatibility
+    public function getFormattedPersonAttribute()
+    {
+        return $this->formatted_member_limit;
     }
 }

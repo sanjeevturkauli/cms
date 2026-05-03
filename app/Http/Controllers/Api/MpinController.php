@@ -31,14 +31,32 @@ class MpinController extends Controller
             }
 
             $mpin = Mpin::updateOrCreate(
-                ['user_id' => $request->user()->id],
+                ['user_id' => $user->id],
                 [
                     'mpin' => Hash::make($request->mpin),
                     'is_active' => true,
                 ]
             );
 
-            $data = $mpin->only(['id', 'user_id', 'is_active', 'created_at', 'updated_at']);
+            // Generate new access token
+            $token = $user->createToken('auth_token')->accessToken;
+
+            $data = [
+                'user' => [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'mobile' => $user->mobile,
+                    'roles' => $user->getRoleNames(),
+                ],
+                'mpin' => [
+                    'id' => $mpin->id,
+                    'is_active' => $mpin->is_active,
+                    'created_at' => $mpin->created_at,
+                ],
+                'access_token' => $token,
+                'token_type' => 'Bearer',
+            ];
 
             return $this->response(200, 'MPIN created successfully.', $data, true);
         } catch (\Throwable $th) {
@@ -57,7 +75,8 @@ class MpinController extends Controller
         }
 
         try {
-            $mpin = Mpin::where('user_id', $request->user()->id)->where('is_active', true)->first();
+            $user = $request->user();
+            $mpin = Mpin::where('user_id', $user->id)->where('is_active', true)->first();
 
             if (!$mpin) {
                 return $this->response(404, 'MPIN not found. Please create one first.', [], false);
@@ -69,9 +88,23 @@ class MpinController extends Controller
 
             $mpin->update(['last_used_at' => now()]);
 
-            $data = $mpin->only(['id', 'user_id', 'last_used_at']);
+            // Generate new access token
+            $token = $user->createToken('auth_token')->accessToken;
 
-            return $this->response(200, 'User logged in successfully.', $data, true);
+            $data = [
+                'user' => [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'mobile' => $user->mobile,
+                    'roles' => $user->getRoleNames(),
+                ],
+                'access_token' => $token,
+                'token_type' => 'Bearer',
+                'mpin_verified_at' => now()->toDateTimeString(),
+            ];
+
+            return $this->response(200, 'MPIN verified successfully. User logged in.', $data, true);
         } catch (\Throwable $th) {
             return $this->response(500, $th->getMessage(), [], false);
         }

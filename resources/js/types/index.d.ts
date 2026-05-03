@@ -22,6 +22,14 @@ export interface NavItem {
     isActive?: boolean;
 }
 
+export interface KycStatus {
+    status: 'pending' | 'submitted' | 'approved' | 'rejected';
+    text: string;
+    class: string;
+    clickable: boolean;
+    url?: string | null;
+}
+
 export interface SharedData {
     name: string;
     quote: { message: string; author: string };
@@ -29,10 +37,15 @@ export interface SharedData {
     sidebarOpen: boolean;
     currentTeamId?: number | null;
     notificationCount?: number;
+    isAdmin?: boolean;
+    isMember?: boolean;
+    isTeamOwner?: boolean;
+    routeName?: string;
     wallet?: {
         balance: string;
         raw_balance: number;
     } | null;
+    kycStatus?: KycStatus | null;
     siteSettings?: {
         site_name: string;
         site_description: string;

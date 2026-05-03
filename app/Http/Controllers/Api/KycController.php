@@ -9,6 +9,7 @@ use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Validator;
 
 class KycController extends Controller
 {
@@ -42,27 +43,92 @@ class KycController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(KycRequest $request): JsonResponse
+    public function store(Request $request): JsonResponse
     {
-        $data = $request->validated();
-        $data['user_id'] = auth()->id();
+        $validator = Validator::make($request->all(), [
+            'identity_type' => 'required|in:aadhar,voter_id,passport,driving_license,other',
+            'identity_number' => 'required|string|max:50',
+            'identity_image' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+            'pan_number' => 'required|string|size:10|regex:/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/',
+            'pan_card_image' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+            'country' => 'required|string|max:100',
+            'state' => 'required|string|max:100',
+            'city' => 'required|string|max:100',
+            'area' => 'nullable|string|max:100',
+            'full_address' => 'required|string',
+            'pincode' => 'required|string|max:10',
+            'date_of_birth' => 'required|date|before:today',
+            'gender' => 'required|in:male,female,other',
+            'father_name' => 'nullable|string|max:255',
+            'mother_name' => 'nullable|string|max:255',
+            'occupation' => 'nullable|string|max:255',
+            'annual_income' => 'nullable|numeric|min:0',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => $validator->errors()->first(),
+                'data' => [],
+            ], 422);
+        }
+
+        $validated = $validator->validated();
+        $user = $request->user();
+        
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized. Please login first.',
+                'data' => [],
+            ], 401);
+        }
 
         // Handle file uploads
         if ($request->hasFile('identity_image')) {
-            $data['identity_image'] = $request->file('identity_image')->store('kyc/identity', 'public');
+            $validated['identity_image'] = $request->file('identity_image')->store('kyc/identity', 'public');
         }
 
         if ($request->hasFile('pan_card_image')) {
-            $data['pan_card_image'] = $request->file('pan_card_image')->store('kyc/pan', 'public');
+            $validated['pan_card_image'] = $request->file('pan_card_image')->store('kyc/pan', 'public');
         }
+        
 
-        $kyc = Kyc::create($data);
+        // Create or update KYC
+        $kyc = $user->kyc()->updateOrCreate(
+            ['user_id' => $user->id],
+            $validated
+        );
+
+        // Submit the KYC
         $kyc->submit();
 
         return response()->json([
             'success' => true,
-            'message' => 'KYC submitted successfully.',
-            'data' => $kyc->load(['user', 'approvedBy']),
+            'message' => 'KYC application submitted successfully! Your application is under review.',
+            'data' => [
+                'id' => $kyc->id,
+                'identity_type' => $kyc->identity_type,
+                'identity_number' => $kyc->identity_number,
+                'identity_image' => $kyc->identity_image ? asset('storage/' . $kyc->identity_image) : null,
+                'pan_number' => $kyc->pan_number,
+                'pan_card_image' => $kyc->pan_card_image ? asset('storage/' . $kyc->pan_card_image) : null,
+                'country' => $kyc->country,
+                'state' => $kyc->state,
+                'city' => $kyc->city,
+                'area' => $kyc->area,
+                'full_address' => $kyc->full_address,
+                'pincode' => $kyc->pincode,
+                'date_of_birth' => $kyc->date_of_birth?->format('Y-m-d'),
+                'gender' => $kyc->gender,
+                'father_name' => $kyc->father_name,
+                'mother_name' => $kyc->mother_name,
+                'occupation' => $kyc->occupation,
+                'annual_income' => $kyc->annual_income,
+                'status' => $kyc->status,
+                'completion_percentage' => $kyc->completion_percentage,
+                'submitted_at' => $kyc->submitted_at?->format('Y-m-d H:i:s'),
+            ],
         ], 201);
     }
 
@@ -143,20 +209,55 @@ class KycController extends Controller
     /**
      * Get current user's KYC
      */
-    public function myKyc(): JsonResponse
+    public function myKyc(Request $request): JsonResponse
     {
-        $kyc = auth()->user()->kyc;
+        $user = $request->user();
+        
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized. Please login first.',
+            ], 401);
+        }
+        
+        $kyc = $user->kyc;
 
         if (!$kyc) {
             return response()->json([
-                'success' => false,
-                'message' => 'KYC not found.',
-            ], 404);
+                'success' => true,
+                'message' => 'KYC not found. Please submit your KYC.',
+                'data' => null,
+            ]);
         }
 
         return response()->json([
             'success' => true,
-            'data' => $kyc,
+            'message' => 'KYC fetched successfully.',
+            'data' => [
+                'id' => $kyc->id,
+                'identity_type' => $kyc->identity_type,
+                'identity_number' => $kyc->identity_number,
+                'identity_image' => $kyc->identity_image ? asset('storage/' . $kyc->identity_image) : null,
+                'pan_number' => $kyc->pan_number,
+                'pan_card_image' => $kyc->pan_card_image ? asset('storage/' . $kyc->pan_card_image) : null,
+                'country' => $kyc->country,
+                'state' => $kyc->state,
+                'city' => $kyc->city,
+                'area' => $kyc->area,
+                'full_address' => $kyc->full_address,
+                'pincode' => $kyc->pincode,
+                'date_of_birth' => $kyc->date_of_birth?->format('Y-m-d'),
+                'gender' => $kyc->gender,
+                'father_name' => $kyc->father_name,
+                'mother_name' => $kyc->mother_name,
+                'occupation' => $kyc->occupation,
+                'annual_income' => $kyc->annual_income,
+                'status' => $kyc->status,
+                'reason' => $kyc->reason,
+                'completion_percentage' => $kyc->completion_percentage,
+                'submitted_at' => $kyc->submitted_at?->format('Y-m-d H:i:s'),
+                'approved_date' => $kyc->approved_date?->format('Y-m-d H:i:s'),
+            ],
         ]);
     }
 

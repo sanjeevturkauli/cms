@@ -1,6 +1,7 @@
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import { Icon } from '@/components/icon';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
     DropdownMenu,
@@ -66,8 +67,10 @@ interface AppHeaderProps {
 
 export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
     const page = usePage<SharedData>();
-    const { auth } = page.props;
+    const { auth, kycStatus } = page.props;
     const getInitials = useInitials();
+
+    console.log('kycStatus',kycStatus);
     return (
         <>
             <div className="border-b border-sidebar-border/80">
@@ -185,6 +188,32 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
                     </div>
 
                     <div className="ml-auto flex items-center space-x-2">
+                        {/* KYC Status Badge */}
+                        {auth.user && kycStatus && (
+                            <div className="hidden sm:block">
+                                {kycStatus.clickable ? (
+                                    <Link href="/kyc/create">
+                                        <Badge
+                                            variant="secondary"
+                                            className={cn(
+                                                'cursor-pointer hover:opacity-80',
+                                                kycStatus.class
+                                            )}
+                                        >
+                                            {kycStatus.text}
+                                        </Badge>
+                                    </Link>
+                                ) : (
+                                    <Badge
+                                        variant="secondary"
+                                        className={kycStatus.class}
+                                    >
+                                        {kycStatus.text}
+                                    </Badge>
+                                )}
+                            </div>
+                        )}
+
                         <div className="relative flex items-center space-x-1">
                             <Button
                                 variant="ghost"

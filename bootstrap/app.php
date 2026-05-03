@@ -26,14 +26,14 @@ return Application::configure(basePath: dirname(__DIR__))
                 ->name('admin.')
                 ->group(base_path('routes/admin.php'));
 
-            // Team Routes - For team role and above
-            Route::middleware(['web', 'auth', 'verified', 'role:team|admin'])
+            // Team Routes - Only for team role
+            Route::middleware(['web', 'auth', 'verified', 'role:team'])
                 ->prefix('team')
                 ->name('team.')
                 ->group(base_path('routes/team.php'));
 
-            // Member Routes - For member role and above
-            Route::middleware(['web', 'auth', 'verified', 'role:member|team|admin'])
+            // Member Routes - Only for member role
+            Route::middleware(['web', 'auth', 'verified', 'role:member'])
                 ->prefix('member')
                 ->name('member.')
                 ->group(base_path('routes/member.php'));
@@ -50,6 +50,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'permission' => PermissionMiddleware::class,
             'role_or_permission' => RoleOrPermissionMiddleware::class,
             'check.subscription' => \App\Http\Middleware\CheckTeamSubscription::class,
+            'check.member.payment' => \App\Http\Middleware\CheckMemberPayment::class,
         ]);
 
         $middleware->encryptCookies(except: ['appearance', 'sidebar_state']);
