@@ -32,7 +32,7 @@ class PaymentController extends Controller
         $team = Team::findOrFail($request->team_id);
         $package = Package::findOrFail($request->package_id);
 
-        if ($team->user_id !== $user->id) {
+        if ($team->user_id != $user->id) {
             if ($request->expectsJson()) {
                 return response()->json(['error' => 'You can only subscribe for teams you own.'], 403);
             }
