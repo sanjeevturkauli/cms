@@ -157,7 +157,7 @@ class TeamInfoController extends Controller
         }
 
         $user = Auth::user();
-        $isOwner = $team->user_id === $user->id;
+        $isOwner = $team->user_id == $user->id;
 
         if (!$isOwner && !$user->hasRole('admin')) {
             return redirect()->back()->with('error', 'You do not have permission to update team plan.');
