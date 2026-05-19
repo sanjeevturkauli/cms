@@ -12,6 +12,7 @@ use App\Models\Transaction;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Http;
 
 class MemberPaymentGatewayController extends Controller
 {
@@ -83,17 +84,11 @@ class MemberPaymentGatewayController extends Controller
                 ],
             ];
 
-            $ch = curl_init();
-            curl_setopt($ch, CURLOPT_URL, 'https://api.razorpay.com/v1/orders');
-            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-            curl_setopt($ch, CURLOPT_POST, true);
-            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($orderData));
-            curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
-            curl_setopt($ch, CURLOPT_USERPWD, "{$keyId}:{$keySecret}");
-            $response = curl_exec($ch);
-            curl_close($ch);
+            $response = Http::withBasicAuth($keyId, $keySecret)
+                ->withHeaders(['Content-Type' => 'application/json'])
+                ->post('https://api.razorpay.com/v1/orders', $orderData);
 
-            $orderResponse = json_decode($response, true);
+            $orderResponse = $response->json();
 
             if (isset($orderResponse['id'])) {
                 return response()->json([

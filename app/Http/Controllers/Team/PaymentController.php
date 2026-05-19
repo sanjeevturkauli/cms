@@ -14,6 +14,7 @@ use App\Models\Transaction;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Http;
 use Inertia\Inertia;
 use Stripe\PaymentIntent;
 use Stripe\Stripe;
@@ -98,28 +99,18 @@ class PaymentController extends Controller
                 ]
             ];
 
-            $ch = curl_init();
-            curl_setopt($ch, CURLOPT_URL, 'https://api.razorpay.com/v1/orders');
-            curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-            curl_setopt($ch, CURLOPT_POST, 1);
-            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($orderData));
-            curl_setopt($ch, CURLOPT_USERPWD, $keyId . ':' . $keySecret);
-            curl_setopt($ch, CURLOPT_HTTPHEADER, [
-                'Content-Type: application/json'
-            ]);
+            $response = Http::withBasicAuth($keyId, $keySecret)
+                ->withHeaders(['Content-Type' => 'application/json'])
+                ->post('https://api.razorpay.com/v1/orders', $orderData);
 
-            $response = curl_exec($ch);
-            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-            curl_close($ch);
-
-            if ($httpCode !== 200) {
+            if (!$response->successful()) {
                 return response()->json([
                     'success' => false,
                     'error' => 'Failed to create Razorpay order. Please check your API credentials.',
                 ]);
             }
 
-            $orderResponse = json_decode($response, true);
+            $orderResponse = $response->json();
 
             if (!$orderResponse || !isset($orderResponse['id'])) {
                 return response()->json([
