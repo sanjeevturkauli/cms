@@ -17,9 +17,7 @@ use Laravel\Fortify\Features;
 
 // Public Routes
 Route::get('/', function () {
-    return Inertia::render('welcome', [
-        'canRegister' => Features::enabled(Features::registration()),
-    ]);
+    return Inertia::render('Landing/LandingPage');
 })->name('home');
 
 Route::get('/users', [UserController::class, 'index'])->name('users');
