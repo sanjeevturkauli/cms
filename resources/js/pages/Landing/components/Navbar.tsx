@@ -42,14 +42,16 @@ export default function Navbar({ theme, toggleTheme }: NavbarProps) {
                     {/* Logo */}
                     <motion.div
                         whileHover={{ scale: 1.05 }}
-                        className="flex items-center space-x-2"
+                        className="flex items-center "
                     >
-                        <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl flex items-center justify-center">
-                            <span className="text-white font-bold text-xl">CM</span>
-                        </div>
-                        <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                        <img 
+                            src="/logo-2.png" 
+                            alt="CommunityManager Logo" 
+                            className="w-48 h-48 object-contain"
+                        />
+                        {/* <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
                             Community Manager
-                        </span>
+                        </span> */}
                     </motion.div>
 
                     {/* Desktop Navigation */}

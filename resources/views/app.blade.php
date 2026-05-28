@@ -31,11 +31,16 @@
             }
         </style>
 
-        <title inertia>{{ config('app.name', 'Laravel') }}</title>
+        <title inertia>{{ config('app.name', 'Community Manager') }}</title>
 
-        <link rel="icon" href="/favicon.ico" sizes="any">
-        <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-        <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+        <!-- Favicons -->
+        <link rel="icon" href="/favicon_io/favicon.ico" sizes="any">
+        <link rel="icon" href="/favicon_io/favicon-16x16.png" type="image/png" sizes="16x16">
+        <link rel="icon" href="/favicon_io/favicon-32x32.png" type="image/png" sizes="32x32">
+        <link rel="apple-touch-icon" href="/favicon_io/apple-touch-icon.png">
+        <link rel="icon" href="/favicon_io/android-chrome-192x192.png" sizes="192x192">
+        <link rel="icon" href="/favicon_io/android-chrome-512x512.png" sizes="512x512">
+        <link rel="manifest" href="/favicon_io/site.webmanifest">
 
         <link rel="preconnect" href="https://fonts.bunny.net">
         <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600" rel="stylesheet" />
